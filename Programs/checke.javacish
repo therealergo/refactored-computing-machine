@@ -1,0 +1,9 @@
+function f() {
+  return 7;
+}
+
+var g = f();
+
+function main() {
+  return g;
+}

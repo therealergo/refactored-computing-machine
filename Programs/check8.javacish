@@ -1,0 +1,10 @@
+function main() {
+  function f1() {
+    return 5;
+  }
+  function f2() {
+    return 7;
+  }
+  f1();
+  f2();
+}
