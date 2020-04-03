@@ -7,7 +7,7 @@ This is an interpreter for a Java-C-Ish language, written in Racket. It was crea
 The interpreter is called on a file using the `interpret` function, like `(interpret "program.javacish")`. Examples are given at the top of the `Interpreter3Core.rkt` file.
 
 # Structure
-The `Programs` folder contains a suite of example programs used as test cases.
-The `Interpreter3State.rkt` file implements functions for manipulating the program's runtime state.
-The `functionParser.rkt` and `lex.rkt` files implement all of the text parsing. We did not write them.
-The `Interpreter3Core.rkt` file implements the rest of the interpreter, including all of the execution.
+- The `Programs` folder contains a suite of example programs used as test cases.
+- The `Interpreter3State.rkt` file implements functions for manipulating the program's runtime state.
+- The `functionParser.rkt` and `lex.rkt` files implement all of the text parsing. We did not write them.
+- The `Interpreter3Core.rkt` file implements the rest of the interpreter, including all of the execution.
