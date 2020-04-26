@@ -2,7 +2,6 @@
 (provide (all-defined-out))
 (require "functionParser.rkt")
 (require "Interpreter3State.rkt")
-; Testing that I can, in fact, successfully push changes to git before I make any important changes
 
 ;----------------------------------------------------------------------;
 
