@@ -361,14 +361,16 @@
 
 ; Return the state that results from saving a class definition.
 ; The entire class body is just placed into the state, mapped to its name.
-; Test case: (class_resultstate 
+; Test case: (class_resultstate '(class A () ((var x 5) (var y 10))) '(((z 10))))
+;         -> '(((A (class A () ((constructor ()) (var x 5) (var y 10)))) (z 10)))
+; Test case: (class_resultstate '(class A () ((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x)))))) '(((z 10))))
+;         -> '(((A (class A () ((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x))))))) (z 10)))
 (define class_resultstate
   (lambda (in state)
-    (state_update (class_name in) in (state_declare (class_name in) state))))
-
-;(define constructor_declare
- ; (lambda (in state)
-  ;  (
+    (cond
+      ((constructor? (class_body in)) (state_update (class_name in) in (state_declare (class_name in) state)))
+      (else                           (state_update (class_name in) (append (append (append (list 'class) (list (class_name in))) '(())) (list (append (list (append (list 'constructor) '(()))) (class_body in))))
+                                                                       (state_declare (class_name in) state))))))
 
 ;----------------------------------------------------------------------;
 ; FUNCTION
