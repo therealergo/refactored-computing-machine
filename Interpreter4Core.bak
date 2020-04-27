@@ -1,7 +1,8 @@
 #lang racket
 (provide (all-defined-out))
-(require "classParser.rkt")
-(require "Interpreter4State.rkt")
+(require "functionParser.rkt")
+(require "Interpreter3State.rkt")
+; Testing that I can, in fact, successfully push changes to git before I make any important changes
 
 ;----------------------------------------------------------------------;
 
@@ -17,31 +18,83 @@
 
 ; TEST
 ; Test case: (interpret "Programs/test1.javacish")
-;         -> 
+;         -> 10
 ; Test case: (interpret "Programs/test2.javacish")
-;         -> 
+;         -> 14
 ; Test case: (interpret "Programs/test3.javacish")
-;         -> 
+;         -> 45
 ; Test case: (interpret "Programs/test4.javacish")
-;         -> 
+;         -> 55
 ; Test case: (interpret "Programs/test5.javacish")
-;         -> 
+;         -> 1
 ; Test case: (interpret "Programs/test6.javacish")
-;         -> 
+;         -> 115
 ; Test case: (interpret "Programs/test7.javacish")
-;         -> 
+;         -> 'true
 ; Test case: (interpret "Programs/test8.javacish")
-;         -> 
+;         -> 20
 ; Test case: (interpret "Programs/test9.javacish")
-;         -> 
+;         -> 24
 ; Test case: (interpret "Programs/test10.javacish")
-;         -> 
+;         -> 2
 ; Test case: (interpret "Programs/test11.javacish")
-;         -> 
+;         -> 35
 ; Test case: (interpret "Programs/test12.javacish")
-;         -> 
+;         -> #error#
 ; Test case: (interpret "Programs/test13.javacish")
-;         -> 
+;         -> 90
+; Test case: (interpret "Programs/test14.javacish")
+;         -> 69
+; Test case: (interpret "Programs/test15.javacish")
+;         -> 87
+; Test case: (interpret "Programs/test16.javacish")
+;         -> 64
+; Test case: (interpret "Programs/test17.javacish")
+;         -> #error#
+; Test case: (interpret "Programs/test18.javacish")
+;         -> 125
+; Test case: (interpret "Programs/test19.javacish")
+;         -> 100
+; Test case: (interpret "Programs/test20.javacish")
+;         -> 2000400
+
+; CHECK
+; Test case: (interpret "Programs/check1.javacish")
+;         -> 10
+; Test case: (interpret "Programs/check2.javacish")
+;         -> 44
+; Test case: (interpret "Programs/check3.javacish")
+;         -> 44
+; Test case: (interpret "Programs/check4.javacish")
+;         -> 44
+; Test case: (interpret "Programs/check5.javacish")
+;         -> 45
+; Test case: (interpret "Programs/check6.javacish")
+;         -> 100
+; Test case: (interpret "Programs/check7.javacish")
+;         -> 100
+; Test case: (interpret "Programs/check8.javacish")
+;         -> #error#
+; Test case: (interpret "Programs/check9.javacish")
+;         -> #error#
+; Test case: (interpret "Programs/check10.javacish")
+;         -> #error#
+; Test case: (interpret "Programs/check11.javacish")
+;         -> 7
+; Test case: (interpret "Programs/check12.javacish")
+;         -> 5
+; Test case: (interpret "Programs/check13.javacish")
+;         -> 10
+; Test case: (interpret "Programs/checka.javacish")
+;         -> -1
+; Test case: (interpret "Programs/checkb.javacish")
+;         -> 0
+; Test case: (interpret "Programs/checkc.javacish")
+;         -> 362880000
+; Test case: (interpret "Programs/checkd.javacish")
+;         -> 2
+; Test case: (interpret "Programs/checke.javacish")
+;         -> 7
 
 ;----------------------------------------------------------------------;
 
@@ -309,33 +362,6 @@
 (define assignment_resultstate
   (lambda (in state)
     (state_update (assignment_variable in) (expression_value (assignment_expression in) state) (expression_state (assignment_expression in) state))))
-
-;----------------------------------------------------------------------;
-; CLASS
-; NOTE: I am implementing classes similarly to functions
-;       and objects similarly to funcalls
-
-; Get the name of a given class
-; Test case: (class_name '(class A () ((var x 5) (var y 10))))
-;         -> 'A
-(define class_name cadr)
-
-; Get the constructor of a given class
-; Test case: (class_constructor '(class A () ((var x 5) (var y 10))))
-;         -> '()
-(define class_constructor caddr)
-
-; Get the body of a given class
-; Test case: (class_body '(class A () ((var x 5) (var y 10))))
-;         -> '((var x 5) (var y 10))
-(define class_body cadddr)
-
-; Return the state that results from saving a class definition.
-; The entire class body is just placed into the state, mapped to its name.
-; Test case: (class_resultstate 
-(define class_resultstate
-  (lambda (in state)
-    (state_update (class_name in) in (state_declare (class_name in) state))))
 
 ;----------------------------------------------------------------------;
 ; FUNCTION
@@ -845,7 +871,6 @@
       ((eq? 'throw    (statement_operator in)) (throw_resultstate       in       state                        ))
       ((eq? 'function (statement_operator in)) (function_resultstate    in       state                        ))
       ((eq? 'funcall  (statement_operator in)) (funcall_resultstate     in       state                        ))
-      ((eq? 'class    (statement_operator in)) (class_resultstate       in       state                        ))
       (else (error 'badop "Oops, bad statement given!")))))
 
 ; Wrapper that calls the interpreter on the given file
