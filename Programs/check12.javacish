@@ -1,8 +1,0 @@
-function main() {
-  try {
-    throw 5;
-  } catch (e) {
-    return e;
-  } finally {
-  }
-}
