@@ -315,20 +315,49 @@
 ; NOTE: I am implementing classes similarly to functions
 ;       and objects similarly to funcalls
 
+; Get the first item in a list
+; Test case: (statement_first '((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x))))))
+;         -> '(var x)
+(define statement_first car)
+
+; Get the remaining items in a list
+; Test case: (statement_remaining '((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x))))))
+;         -> '((constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x)))))
+(define statement_remaining cdr)
+
 ; Get the name of a given class
 ; Test case: (class_name '(class A () ((var x 5) (var y 10))))
 ;         -> 'A
 (define class_name cadr)
 
-; Get the constructor of a given class
-; Test case: (class_constructor '(class A () ((var x 5) (var y 10))))
-;         -> '()
-(define class_constructor caddr)
-
 ; Get the body of a given class
 ; Test case: (class_body '(class A () ((var x 5) (var y 10))))
 ;         -> '((var x 5) (var y 10))
+; Test case: (class_body '(class A () ((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x)))))))
+;         -> '((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x)))))
 (define class_body cadddr)
+
+; Return #t if the constructor has parameters, #f otherwise
+; Test case: (constructor? '((var x 5) (var y 10)))
+;         -> #f
+; Test case: (constructor? '((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x))))))
+;         -> #t
+(define constructor?
+  (lambda (in)
+    (cond
+      ((null? in)                                                #f                                    )
+      ((eq? 'constructor (statement_first (statement_first in))) #t                                    )
+      (else                                                     (constructor? (statement_remaining in))))))
+
+; Get the constructor of a given class
+; Test case: (class_constructor '((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x))))))
+;         -> '(constructor (val) ((= x val)))
+(define class_constructor
+  (lambda (in)
+    (cond
+      ((null? in)                                                (error 'badconst "Oops, this function has no constructor!"))
+      ((eq? 'constructor (statement_first (statement_first in))) (statement_first in)                                       )
+      (else                                                      (class_constructor (statement_remaining in))               ))))
 
 ; Return the state that results from saving a class definition.
 ; The entire class body is just placed into the state, mapped to its name.
@@ -336,6 +365,10 @@
 (define class_resultstate
   (lambda (in state)
     (state_update (class_name in) in (state_declare (class_name in) state))))
+
+;(define constructor_declare
+ ; (lambda (in state)
+  ;  (
 
 ;----------------------------------------------------------------------;
 ; FUNCTION
