@@ -312,8 +312,6 @@
 
 ;----------------------------------------------------------------------;
 ; CLASS
-; NOTE: I am implementing classes similarly to functions
-;       and instances similarly to funcalls
 
 ; Get the first item in a list
 ; Test case: (statement_first '((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x))))))
@@ -384,8 +382,6 @@
 ;         -> '(((A (class A () ((constructor ()) (var x 5) (var y 10)))) (z 10)))
 ; Test case: (class_define '(class A () ((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x)))))) '(((z 10))))
 ;         -> '(((A (class A () ((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x))))))) (z 10)))
-; Test case: '(((A (class A (extends B) ((constructor ()) (var x 5) (var y 10)))) (z 10)))
-;         -> 
 (define class_define
   (lambda (in state)
     (cond
@@ -401,9 +397,30 @@
 ;----------------------------------------------------------------------;
 ; INSTANCE
 
-; Declare an instance of a class within the state
-; Includes name, type, and field values
-;(define instance_declare
+; Return class type of instance in the state
+; Test case: (state_classtype 'a '(((a (new A)) (z 10))))
+;         -> 'A
+(define state_classtype
+  (lambda (name state)
+    (cond
+      ((eq? (statement_first (state_lookup name state)) 'new) (class_name (state_lookup name state))))))
+
+; Test case: (key_word '(dot super m))
+;         -> 'super
+; Test case: (key_word '(dot a x))
+;         -> 'a
+; Return the 'key word' of the expression
+(define key_word cadr)
+
+; Test case: (subject '(dot super m))
+;         -> 'm
+; Test case: (subject '(dot a x))
+;         -> 'x
+; Return the 'subject' that dot is being applied to
+(define subject caddr)
+
+; Apply 'dot' to a statement
+;(define dot_resultstate
  ; (lambda (in state)
   ;  (cond
    ;   (
@@ -917,7 +934,7 @@
       ((eq? 'function (statement_operator in)) (function_resultstate    in       state                        ))
       ((eq? 'funcall  (statement_operator in)) (funcall_resultstate     in       state                        ))
       ((eq? 'class    (statement_operator in)) (class_resultstate       in       state                        ))
-      ;((eq? 'new      (statement_operator in)) (instance_resultstate    in       state                        ))
+      ;((eq? 'dot      (statement_operator in)) (dot_resultstate         in       state                        ))
       (else (error 'badop "Oops, bad statement given!")))))
 
 ; Wrapper that calls the interpreter on the given file
