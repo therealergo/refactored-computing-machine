@@ -378,20 +378,20 @@
 
 ; Return the state that results from saving a class definition.
 ; The entire class body is just placed into the state, mapped to its name.
-; Test case: (class_define '(class A () ((var x 5) (var y 10))) '(((z 10))))
+; Test case: (class_resultstate '(class A () ((var x 5) (var y 10))) '(((z 10))))
 ;         -> '(((A (class A () ((constructor ()) (var x 5) (var y 10)))) (z 10)))
-; Test case: (class_define '(class A () ((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x)))))) '(((z 10))))
+; Test case: (class_resultstate '(class A () ((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x)))))) '(((z 10))))
 ;         -> '(((A (class A () ((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x))))))) (z 10)))
-(define class_define
+(define class_resultstate
   (lambda (in state)
     (cond
       ((constructor? (class_body in)) (state_update (class_name in) in (state_declare (class_name in) state)))
       (else                           (state_update (class_name in) (append (append (append (list 'class) (list (class_name in))) (list (class_extends in))) (list (append (list (append (list 'constructor) '(()))) (class_body in))))
                                                                        (state_declare (class_name in) state))))))
 ; Execute the body of a class
-(define class_resultstate
+(define class_execute
   (lambda (in state)
-    (statement_state (class_body (class_define (statement_first in) state)) state)))
+    (statement_state (class_body (class_resultstate (statement_first in) state)) state)))
       
 
 ;----------------------------------------------------------------------;
@@ -420,10 +420,36 @@
 (define subject caddr)
 
 ; Apply 'dot' to a statement
-;(define dot_resultstate
- ; (lambda (in state)
-  ;  (cond
-   ;   (
+; key_word can either be the current class, a parent class, an instance saved to the state, or a newly declared instance
+; subject can be a variable or a function call
+(define dot_resultstate
+  (lambda (in state)
+    (cond
+      ((eq? 'this  (key_word (statement_first in))) (this_resultstate in state)    ) ; refers to the class that is currently running
+      ((eq? 'super (key_word (statement_first in))) (super_resultstate in state)   ) ;refers to the parent class
+      ((atom?      (key_word (statement_first in))) (declared_resultstate in state)) ;refers to instance saved in state
+      (else                                         (new_resultstate in state))    ))) ;refers to a newly declared instance
+
+; For the current class
+; Return variable value or return function closure
+(define this_resultstate
+  (lambda (in state)
+    (state_lookup (subject (statement_first in)) state)))
+
+; For the parent class
+(define super_resultstate
+  (lambda (in state)
+    (state_lookup (subject (statement_first in)) (statement_state (state_lookup (statement_remaining (class_extends in)) state) '(())))))
+
+; For an instance saved in state
+(define declared_resultstate
+  (lambda (in state)
+    (state_lookup (subject (statement_first in)) (statement_state (state_lookup (key_word (statement_first in)) state) '(())))))
+
+; For a newly declared instance
+(define new_resultstate
+  (lambda (in state)
+    (state_lookup (subject (statement_first in)) (statement_state (statement_first (statement_remaining (key_word (statement_first in)))) '(())))))
 
 ;----------------------------------------------------------------------;
 ; FUNCTION
@@ -934,7 +960,7 @@
       ((eq? 'function (statement_operator in)) (function_resultstate    in       state                        ))
       ((eq? 'funcall  (statement_operator in)) (funcall_resultstate     in       state                        ))
       ((eq? 'class    (statement_operator in)) (class_resultstate       in       state                        ))
-      ;((eq? 'dot      (statement_operator in)) (dot_resultstate         in       state                        ))
+      ((eq? 'dot      (statement_operator in)) (dot_resultstate         in       state                        ))
       (else (error 'badop "Oops, bad statement given!")))))
 
 ; Wrapper that calls the interpreter on the given file
