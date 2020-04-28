@@ -313,7 +313,7 @@
 ;----------------------------------------------------------------------;
 ; CLASS
 ; NOTE: I am implementing classes similarly to functions
-;       and objects similarly to funcalls
+;       and instances similarly to funcalls
 
 ; Get the first item in a list
 ; Test case: (statement_first '((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x))))))
@@ -329,6 +329,25 @@
 ; Test case: (class_name '(class A () ((var x 5) (var y 10))))
 ;         -> 'A
 (define class_name cadr)
+
+; Get the 'extends' portion of a given class
+; Test case: (class_extends '(class A () ((var x 5) (var y 10))))
+;         -> '()
+; Test case: (class_extends '(class B (extends A) ((var x 5) (var y 10))))
+;         -> '(extends A)
+(define class_extends caddr)
+
+; Return #t if a given class has a super class, #f otherwise
+; Test case: (extends? '(class A () ((var x 5) (var y 10))))
+;         -> #f
+; Test case: (extends? '(class B (extends A) ((var x 5) (var y 10))))
+;         -> #t
+(define extends?
+  (lambda (in)
+    (cond
+      ((null? (class_extends in)) #f)
+      ((eq? 'extends (statement_first (class_extends in))) #t)
+      (else (error 'badconst "Oops, bad 'extends' field given!")))))
 
 ; Get the body of a given class
 ; Test case: (class_body '(class A () ((var x 5) (var y 10))))
@@ -361,16 +380,33 @@
 
 ; Return the state that results from saving a class definition.
 ; The entire class body is just placed into the state, mapped to its name.
-; Test case: (class_resultstate '(class A () ((var x 5) (var y 10))) '(((z 10))))
+; Test case: (class_define '(class A () ((var x 5) (var y 10))) '(((z 10))))
 ;         -> '(((A (class A () ((constructor ()) (var x 5) (var y 10)))) (z 10)))
-; Test case: (class_resultstate '(class A () ((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x)))))) '(((z 10))))
+; Test case: (class_define '(class A () ((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x)))))) '(((z 10))))
 ;         -> '(((A (class A () ((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x))))))) (z 10)))
-(define class_resultstate
+; Test case: '(((A (class A (extends B) ((constructor ()) (var x 5) (var y 10)))) (z 10)))
+;         -> 
+(define class_define
   (lambda (in state)
     (cond
       ((constructor? (class_body in)) (state_update (class_name in) in (state_declare (class_name in) state)))
-      (else                           (state_update (class_name in) (append (append (append (list 'class) (list (class_name in))) '(())) (list (append (list (append (list 'constructor) '(()))) (class_body in))))
+      (else                           (state_update (class_name in) (append (append (append (list 'class) (list (class_name in))) (list (class_extends in))) (list (append (list (append (list 'constructor) '(()))) (class_body in))))
                                                                        (state_declare (class_name in) state))))))
+; Execute the body of a class
+(define class_resultstate
+  (lambda (in state)
+    (statement_state (class_body (class_define (statement_first in) state)) state)))
+      
+
+;----------------------------------------------------------------------;
+; INSTANCE
+
+; Declare an instance of a class within the state
+; Includes name, type, and field values
+;(define instance_declare
+ ; (lambda (in state)
+  ;  (cond
+   ;   (
 
 ;----------------------------------------------------------------------;
 ; FUNCTION
@@ -881,6 +917,7 @@
       ((eq? 'function (statement_operator in)) (function_resultstate    in       state                        ))
       ((eq? 'funcall  (statement_operator in)) (funcall_resultstate     in       state                        ))
       ((eq? 'class    (statement_operator in)) (class_resultstate       in       state                        ))
+      ;((eq? 'new      (statement_operator in)) (instance_resultstate    in       state                        ))
       (else (error 'badop "Oops, bad statement given!")))))
 
 ; Wrapper that calls the interpreter on the given file
