@@ -45,7 +45,7 @@
 ;         -> 
 
 ;----------------------------------------------------------------------;
-; ALIAS(ES) FOR "Interpreter4Expression"
+; WRAPPER(S) FOR "Interpreter4Expression"
 
 (define expression_value_core
   (lambda (in state)
