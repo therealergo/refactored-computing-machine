@@ -110,41 +110,41 @@
 ; I'm going to blame the *extra challenge* part mixed with my long function names for that.
 ; Note: f_o, f_v, and f_s are abbreviations for funcall_operator, funcall_resultvalue, and funcall_resultstate respectively.
 ;       These are the the functions used to execute any expression that starts with 'funcall.
-; Test case: (expression_value 'f_o 'f_v 'f_s '(+ 1 (/ 3 2)) '())
+; Test case: (expression_value 'f_o 'f_v 'f_s '(+ 1 (/ 3 2)) '(()))
 ;         -> 2
-; Test case: (expression_value 'f_o 'f_v 'f_s '(- (/ 3 2)) '())
+; Test case: (expression_value 'f_o 'f_v 'f_s '(- (/ 3 2)) '(()))
 ;         -> -1
-; Test case: (expression_value 'f_o 'f_v 'f_s '(== 1 1) '())
+; Test case: (expression_value 'f_o 'f_v 'f_s '(== 1 1) '(()))
 ;         -> 'true
-; Test case: (expression_value 'f_o 'f_v 'f_s '(== 1 2) '())
+; Test case: (expression_value 'f_o 'f_v 'f_s '(== 1 2) '(()))
 ;         -> 'false
-; Test case: (expression_value 'f_o 'f_v 'f_s '(== true true) '())
+; Test case: (expression_value 'f_o 'f_v 'f_s '(== true true) '(()))
 ;         -> 'true
-; Test case: (expression_value 'f_o 'f_v 'f_s '(== true false) '())
+; Test case: (expression_value 'f_o 'f_v 'f_s '(== true false) '(()))
 ;         -> 'false
-; Test case: (expression_value 'f_o 'f_v 'f_s '(&& true false) '())
+; Test case: (expression_value 'f_o 'f_v 'f_s '(&& true false) '(()))
 ;         -> 'false
-; Test case: (expression_value 'f_o 'f_v 'f_s '(&& true true) '())
+; Test case: (expression_value 'f_o 'f_v 'f_s '(&& true true) '(()))
 ;         -> 'true
-; Test case: (expression_value 'f_o 'f_v 'f_s '(|| true false) '())
+; Test case: (expression_value 'f_o 'f_v 'f_s '(|| true false) '(()))
 ;         -> 'true
-; Test case: (expression_value 'f_o 'f_v 'f_s '(|| false false) '())
+; Test case: (expression_value 'f_o 'f_v 'f_s '(|| false false) '(()))
 ;         -> 'false
-; Test case: (expression_value 'f_o 'f_v 'f_s '(>= 1 2) '())
+; Test case: (expression_value 'f_o 'f_v 'f_s '(>= 1 2) '(()))
 ;         -> 'false
-; Test case: (expression_value 'f_o 'f_v 'f_s '(>= 2 2) '())
+; Test case: (expression_value 'f_o 'f_v 'f_s '(>= 2 2) '(()))
 ;         -> 'true
-; Test case: (expression_value 'f_o 'f_v 'f_s '(! true) '())
+; Test case: (expression_value 'f_o 'f_v 'f_s '(! true) '(()))
 ;         -> 'false
-; Test case: (expression_value 'f_o 'f_v 'f_s '(! 'false) '())
+; Test case: (expression_value 'f_o 'f_v 'f_s '(! 'false) '(()))
 ;         -> 'true
-; Test case: (expression_value 'f_o 'f_v 'f_s '(== x y) '((x 2) (y 3)))
+; Test case: (expression_value 'f_o 'f_v 'f_s '(== x y) '(((x 2) (y 3))))
 ;         -> 'false
-; Test case: (expression_value 'f_o 'f_v 'f_s '(== x y) '((x 3) (y 3)))
+; Test case: (expression_value 'f_o 'f_v 'f_s '(== x y) '(((x 3) (y 3))))
 ;         -> 'true
-; Test case: (expression_value 'f_o 'f_v 'f_s '(= x 2) '())
+; Test case: (expression_value 'f_o 'f_v 'f_s '(= x 2) '(()))
 ;         -> 2
-; Test case: (expression_value 'f_o 'f_v 'f_s '(= x (+ x 5)) '((x 7)))
+; Test case: (expression_value 'f_o 'f_v 'f_s '(= x (+ x 5)) '(((x 7))))
 ;         -> 12
 (define expression_value
   (lambda (f_o f_v f_s in state)
@@ -177,8 +177,8 @@
 ; Get the resulting state after evaluating the given expression against the given state.
 ; Note: f_o, f_v, and f_s are abbreviations for funcall_operator, funcall_resultvalue, and funcall_resultstate respectively.
 ;       These are the the functions used to execute any expression that starts with 'funcall.
-; Test case: (expression_state 'f_o 'f_v 'f_s '(= x (+ x 5)) '((x 7)))
-;         -> '((x 12))
+; Test case: (expression_state 'f_o 'f_v 'f_s '(= x (+ x 5)) '(((x 7))))
+;         -> '(((x 12)))
 (define expression_state
   (lambda (f_o f_v f_s in state)
     (cond
