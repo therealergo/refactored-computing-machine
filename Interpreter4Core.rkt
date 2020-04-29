@@ -2,6 +2,7 @@
 (provide (all-defined-out))
 (require "classParser.rkt")
 (require "Interpreter4State.rkt")
+(require "Interpreter4Expression.rkt")
 
 ;----------------------------------------------------------------------;
 
@@ -44,198 +45,11 @@
 ;         -> 
 
 ;----------------------------------------------------------------------;
+; ALIAS(ES) FOR "Interpreter4Expression"
 
-; What should the given expression actually *do*?
-; Test case: (expression_operator '(+ y (+ y 1)))
-;         -> '+
-(define expression_operator car)
-
-; Is there even an expression operator to test?
-; Test case: (expression_hasoperator '(+ y (+ y 1)))
-;         -> #t
-; Test case: (expression_hasoperator 'x)
-;         -> #f
-(define expression_hasoperator
-  (lambda (expression)
-    (list? expression)))
-
-; What's the first value given to the expression?
-; Test case: (expression_operand1 '(+ y (+ y 1)))
-;         -> 'y
-(define expression_operand1 cadr)
-
-; What's the second value given to the expression?
-; Test case: (expression_operand2 '(+ y (+ y 1)))
-;         -> '(+ y 1)
-(define expression_operand2 caddr)
-
-; Was there a second value given to the expression?
-; Test case: (expression_hasOperand2 '(- y (+ y 1)))
-;         -> #t
-; Test case: (expression_hasOperand2 '(- y)
-;         -> #f
-(define expression_hasOperand2
-  (lambda (declaration)
-    (not (null? (cddr declaration)))))
-
-;----------------------------------------------------------------------;
-
-; What should the given conditional actually *do*
-; Test case: (expression_operator '(== x y))
-;         -> '==
-(define conditional_operator car)
-
-; Is there even a conditional operator to test?
-; Test case: (conditional_hasoperator '(! y))
-;         -> #t
-; Test case: (conditional_hasoperator 'x)
-;         -> #f
-(define conditional_hasoperator
-  (lambda (expression)
-    (list? expression)))
-
-; What's the first value given to the conditional?
-; Test case: (conditional_operand1 '(== "true" y))
-;         -> "true"
-(define conditional_operand1 cadr)
-
-; What's the second value given to the conditional?
-; Test case: (conditional_operand2 '(== "true" y))
-;         -> 'y
-(define conditional_operand2 caddr)
-
-;----------------------------------------------------------------------;
-
-; Convert a boolean value from our interpreter into a racket-usable boolean value
-; Test case: (boolean_toRacket 'true)
-;         -> #t
-; Test case: (boolean_toRacket 'false)
-;         -> #f
-; Test case: (boolean_toRacket 7)
-;         -> #error#
-; Test case: (boolean_toRacket 'bananas)
-;         -> #error#
-(define boolean_to_racket
-  (lambda (boolean)
-    (cond
-      ((eq? boolean 'true ) #t)
-      ((eq? boolean 'false) #f)
-      (else (error 'type "Oops, value is not boolean type!")))))
-
-; Convert a boolean value from racket into a value understood by our interpreter
-; Test case: (boolean_toInterpret #t)
-;         -> "true"
-; Test case: (boolean_toInterpret #f)
-;         -> "false"
-; Test case: (boolean_toInterpret 7)
-;         -> #error#
-; Test case: (boolean_toInterpret 'bananas)
-;         -> #error#
-(define boolean_to_interpret
-  (lambda (boolean)
-    (cond
-      ((eq? boolean #t) 'true )
-      ((eq? boolean #f) 'false)
-      (else (error 'type "Oops, value is not boolean type!")))))
-
-;----------------------------------------------------------------------;
-
-; Evaluate the given expression against the given state
-; This one's a bit ugly running off of the edge of the screen --
-; I'm going to blame the *extra challenge* part mixed with my long function names for that.
-; Test case: (expression_value '(+ 1 (/ 3 2)) '())
-;         -> 2
-; Test case: (expression_value '(- (/ 3 2)) '())
-;         -> -1
-; Test case: (expression_value '(== 1 1) '())
-;         -> 'true
-; Test case: (expression_value '(== 1 2) '())
-;         -> 'false
-; Test case: (expression_value '(== true true) '())
-;         -> 'true
-; Test case: (expression_value '(== true false) '())
-;         -> 'false
-; Test case: (expression_value '(&& true false) '())
-;         -> 'false
-; Test case: (expression_value '(&& true true) '())
-;         -> 'true
-; Test case: (expression_value '(|| true false) '())
-;         -> 'true
-; Test case: (expression_value '(|| false false) '())
-;         -> 'false
-; Test case: (expression_value '(>= 1 2) '())
-;         -> 'false
-; Test case: (expression_value '(>= 2 2) '())
-;         -> 'true
-; Test case: (expression_value '(! true) '())
-;         -> 'false
-; Test case: (expression_value '(! 'false) '())
-;         -> 'true
-; Test case: (expression_value '(== x y) '((x 2) (y 3)))
-;         -> 'false
-; Test case: (expression_value '(== x y) '((x 3) (y 3)))
-;         -> 'true
-; Test case: (expression_value '(= x 2) '())
-;         -> 2
-; Test case: (expression_value '(= x (+ x 5)) '((x 7)))
-;         -> 12
-(define expression_value
+(define expression_value_core
   (lambda (in state)
-    (cond
-      ((null? in) (error 'parse "Oops, no expression given!"))
-      ((number? in) in)
-      ((eq? in 'true ) in)
-      ((eq? in 'false) in)
-      ((state_isdec in state) (state_lookup in state))
-      ((not (or (expression_hasoperator in) (conditional_hasoperator in))) (error 'declare "Oops, attempted expression with un-declared variable!"))
-      ((and (eq? '- (expression_operator in)) (not (expression_hasOperand2 in))) (-        (expression_value (expression_operand1 in) state)                                                                                               ))
-      (     (eq? '+ (expression_operator in))                                    (+        (expression_value (expression_operand1 in) state) (expression_value (expression_operand2 in) (expression_state (expression_operand1 in) state)) ))
-      (     (eq? '- (expression_operator in))                                    (-        (expression_value (expression_operand1 in) state) (expression_value (expression_operand2 in) (expression_state (expression_operand1 in) state)) ))
-      (     (eq? '* (expression_operator in))                                    (*        (expression_value (expression_operand1 in) state) (expression_value (expression_operand2 in) (expression_state (expression_operand1 in) state)) ))
-      (     (eq? '/ (expression_operator in))                                    (quotient (expression_value (expression_operand1 in) state) (expression_value (expression_operand2 in) (expression_state (expression_operand1 in) state)) ))
-      (     (eq? '% (expression_operator in))                                    (modulo   (expression_value (expression_operand1 in) state) (expression_value (expression_operand2 in) (expression_state (expression_operand1 in) state)) ))
-      ((eq? '== (conditional_operator in)) (boolean_to_interpret (eq?      (expression_value (conditional_operand1 in) state) (expression_value (conditional_operand2 in) (expression_state (expression_operand1 in) state))  )))
-      ((eq? '!= (conditional_operator in)) (boolean_to_interpret (not (eq? (expression_value (conditional_operand1 in) state) (expression_value (conditional_operand2 in) (expression_state (expression_operand1 in) state)) ))))
-      ((eq? '<  (conditional_operator in)) (boolean_to_interpret (<        (expression_value (conditional_operand1 in) state) (expression_value (conditional_operand2 in) (expression_state (expression_operand1 in) state))  )))
-      ((eq? '>  (conditional_operator in)) (boolean_to_interpret (>        (expression_value (conditional_operand1 in) state) (expression_value (conditional_operand2 in) (expression_state (expression_operand1 in) state))  )))
-      ((eq? '<= (conditional_operator in)) (boolean_to_interpret (<=       (expression_value (conditional_operand1 in) state) (expression_value (conditional_operand2 in) (expression_state (expression_operand1 in) state))  )))
-      ((eq? '>= (conditional_operator in)) (boolean_to_interpret (>=       (expression_value (conditional_operand1 in) state) (expression_value (conditional_operand2 in) (expression_state (expression_operand1 in) state))  )))
-      ((eq? '&& (conditional_operator in)) (boolean_to_interpret (and      (boolean_to_racket (expression_value (conditional_operand1 in) state)) (boolean_to_racket (expression_value (conditional_operand2 in) (expression_state (expression_operand1 in) state))) )))
-      ((eq? '|| (conditional_operator in)) (boolean_to_interpret (or       (boolean_to_racket (expression_value (conditional_operand1 in) state)) (boolean_to_racket (expression_value (conditional_operand2 in) (expression_state (expression_operand1 in) state))) )))
-      ((eq? '!  (conditional_operator in)) (boolean_to_interpret (not      (boolean_to_racket (expression_value (conditional_operand1 in) state))                                                                                                                    )))
-      ((eq? '=  (conditional_operator in)) (expression_value (expression_operand2 in) state))
-      ((eq? 'funcall (statement_operator in)) (funcall_resultvalue (funcall_resultstate in state)))
-      (else (error 'badop "Oops, bad expression given!")))))
-
-; Get the resulting state after evaluating the given expression against the given state
-; Test case: (expression_state '(= x (+ x 5)) '((x 7)))
-;         -> '((x 12))
-(define expression_state
-  (lambda (in state)
-    (cond
-      ((null? in) (error 'parse "Oops, no expression given!"))
-      ((number? in)           state)
-      ((eq? in 'true )        state)
-      ((eq? in 'false)        state)
-      ((state_isdec in state) state)
-      ((and (eq? '- (expression_operator in)) (not (expression_hasOperand2 in))) (expression_state (expression_operand1 in) state                                            ) )
-      (     (eq? '+ (expression_operator in))                                    (expression_state (expression_operand2 in) (expression_state (expression_operand1 in) state)) )
-      (     (eq? '- (expression_operator in))                                    (expression_state (expression_operand2 in) (expression_state (expression_operand1 in) state)) )
-      (     (eq? '* (expression_operator in))                                    (expression_state (expression_operand2 in) (expression_state (expression_operand1 in) state)) )
-      (     (eq? '/ (expression_operator in))                                    (expression_state (expression_operand2 in) (expression_state (expression_operand1 in) state)) )
-      (     (eq? '% (expression_operator in))                                    (expression_state (expression_operand2 in) (expression_state (expression_operand1 in) state)) )
-      ((eq? '== (conditional_operator in)) (expression_state (conditional_operand2 in) (expression_state (conditional_operand1 in) state)) )
-      ((eq? '!= (conditional_operator in)) (expression_state (conditional_operand2 in) (expression_state (conditional_operand1 in) state)) )
-      ((eq? '<  (conditional_operator in)) (expression_state (conditional_operand2 in) (expression_state (conditional_operand1 in) state)) )
-      ((eq? '>  (conditional_operator in)) (expression_state (conditional_operand2 in) (expression_state (conditional_operand1 in) state)) )
-      ((eq? '<= (conditional_operator in)) (expression_state (conditional_operand2 in) (expression_state (conditional_operand1 in) state)) )
-      ((eq? '>= (conditional_operator in)) (expression_state (conditional_operand2 in) (expression_state (conditional_operand1 in) state)) )
-      ((eq? '&& (conditional_operator in)) (expression_state (conditional_operand2 in) (expression_state (conditional_operand1 in) state)) )
-      ((eq? '|| (conditional_operator in)) (expression_state (conditional_operand2 in) (expression_state (conditional_operand1 in) state)) )
-      ((eq? '!  (conditional_operator in)) (expression_state (conditional_operand1 in) state                                             ) )
-      ((eq? '=  (expression_operator in )) (state_update     (conditional_operand1 in) (expression_value (conditional_operand2 in) state) (expression_state (conditional_operand2 in) state)))
-      ((eq? 'funcall (statement_operator in)) (funcall_resultstate in state))
-      (else (error 'badop "Oops, bad expression given!")))))
+    (expression_value statement_operator funcall_resultvalue funcall_resultstate in state)))
 
 ;----------------------------------------------------------------------;
 ; STATEMENT
@@ -281,8 +95,8 @@
 (define declaration_resultstate
   (lambda (in state)
     (cond
-      ((declaration_has_expression in) (state_update (declaration_variable in) (expression_value (declaration_expression in) state) (state_declare (declaration_variable in) (expression_state (declaration_expression in) state))) )
-      (else                                                                                                                         (state_declare (declaration_variable in)                                               state )  ) )))
+      ((declaration_has_expression in) (state_update (declaration_variable in) (expression_value_core (declaration_expression in) state) (state_declare (declaration_variable in) (expression_state (declaration_expression in) state))) )
+      (else                                                                                                                              (state_declare (declaration_variable in)                                               state )  ) )))
 
 ;----------------------------------------------------------------------;
 ; ASSIGNMENT
@@ -308,7 +122,7 @@
 ;         -> '(((x 2) (y 2)))
 (define assignment_resultstate
   (lambda (in state)
-    (state_update (assignment_variable in) (expression_value (assignment_expression in) state) (expression_state (assignment_expression in) state))))
+    (state_update (assignment_variable in) (expression_value_core (assignment_expression in) state) (expression_state (assignment_expression in) state))))
 
 ;----------------------------------------------------------------------;
 ; CLASS
@@ -530,8 +344,8 @@
 (define funcall_evalargs_valuelist
   (lambda (args state)
     (cond
-      ((null? args) '()                                                                                                                                       )
-      (else (cons (expression_value (arg_current args) state) (funcall_evalargs_valuelist (args_remaining args) (expression_state (arg_current args) state))) ) )))
+      ((null? args) '()                                                                                                                                            )
+      (else (cons (expression_value_core (arg_current args) state) (funcall_evalargs_valuelist (args_remaining args) (expression_state (arg_current args) state))) ) )))
 
 ; Test case: (funcall_evalargs_resultstate '((+ 1 2) 3) '(()))
 ;         -> '(())
@@ -668,8 +482,8 @@
 (define return_resultstate
   (lambda (in state)
     (cond
-      ((and (state_isdec 'return state) (procedure? (state_lookup 'return state))) ((state_lookup 'return state) (state_update 'return (expression_value (return_expression in) state) (expression_state (return_expression in) state))) )
-      (else                                                                        (error 'noreturn "Oops, attempted to return with no valid return function")                                                                           ) )))
+      ((and (state_isdec 'return state) (procedure? (state_lookup 'return state))) ((state_lookup 'return state) (state_update 'return (expression_value_core (return_expression in) state) (expression_state (return_expression in) state))) )
+      (else                                                                        (error 'noreturn "Oops, attempted to return with no valid return function")                                                                                ) )))
 
 ;----------------------------------------------------------------------;
 ; IF
@@ -712,9 +526,9 @@
 (define if_resultstate
   (lambda (in state)
     (cond
-      (                               (eq? (expression_value (if_conditional in) state) 'true )  (statement_state (if_thenstatement in) (expression_state (if_conditional in) state)) )
-      ((and (if_has_elsestatement in) (eq? (expression_value (if_conditional in) state) 'false)) (statement_state (if_elsestatement in) (expression_state (if_conditional in) state)) )
-      (else                                                                                                                             (expression_state (if_conditional in) state)  ) )))
+      (                               (eq? (expression_value_core (if_conditional in) state) 'true )  (statement_state (if_thenstatement in) (expression_state (if_conditional in) state)) )
+      ((and (if_has_elsestatement in) (eq? (expression_value_core (if_conditional in) state) 'false)) (statement_state (if_elsestatement in) (expression_state (if_conditional in) state)) )
+      (else                                                                                                                                  (expression_state (if_conditional in) state)  ) )))
 
 ;----------------------------------------------------------------------;
 ; BREAK
@@ -844,9 +658,9 @@
 (define throw_resultstate
   (lambda (in state)
     (cond
-      ((not (state_isdec 'catch state))               (error 'badthrow "Oops, attempted to throw with no possible catch function!")                                                                     )
-      ((not (procedure? (state_lookup 'catch state))) (error 'badthrow "Oops, attempted to throw with no valid catch function!")                                                                        )
-      (else                                           ((state_lookup 'catch state) (state_update 'catch (expression_value (throw_expression in) state) (expression_state (throw_expression in) state))) ) )))
+      ((not (state_isdec 'catch state))               (error 'badthrow "Oops, attempted to throw with no possible catch function!")                                                                          )
+      ((not (procedure? (state_lookup 'catch state))) (error 'badthrow "Oops, attempted to throw with no valid catch function!")                                                                             )
+      (else                                           ((state_lookup 'catch state) (state_update 'catch (expression_value_core (throw_expression in) state) (expression_state (throw_expression in) state))) ) )))
 
 ;----------------------------------------------------------------------;
 ; WHILE
@@ -876,10 +690,10 @@
     (call/cc
      (lambda (break)
        (cond
-         ((eq? (expression_value (while_conditional in) (state_update 'break break state)) 'true ) (while_resultstate in (call/cc
-                                                                                                                         (lambda (continue)
-                                                                                                                           (statement_state (while_bodystatement in) (expression_state (while_conditional in) (state_update 'break break (state_update 'continue continue state))))))) )
-         (else                                                                                                                                                       (expression_state (while_conditional in) (state_update 'break break                                  state ))     ) )))))))
+         ((eq? (expression_value_core (while_conditional in) (state_update 'break break state)) 'true ) (while_resultstate in (call/cc
+                                                                                                                               (lambda (continue)
+                                                                                                                                 (statement_state (while_bodystatement in) (expression_state (while_conditional in) (state_update 'break break (state_update 'continue continue state))))))) )
+         (else                                                                                                                                                             (expression_state (while_conditional in) (state_update 'break break                                  state ))     ) )))))))
 
 ;----------------------------------------------------------------------;
 ; BLOCK
