@@ -419,6 +419,10 @@
 ; Return the 'subject' that dot is being applied to
 (define subject caddr)
 
+(define (atom? x)
+  (and (not (null? x))
+       (not (pair? x))))
+
 ; Apply 'dot' to a statement
 ; key_word can either be the current class, a parent class, an instance saved to the state, or a newly declared instance
 ; subject can be a variable or a function call
