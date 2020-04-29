@@ -11,7 +11,7 @@
 ; HEAP
 ; A beautiful, fast heap implementation. No cheaty non-functional-ness here!
 ; It takes a state-of-the art patent-pending new approach to memory management:
-; Memory, once allocated, can never be freed.
+; Memory, once allocated, is never and can never be freed.
 ; (some may recognize this as the memory management approach used by Google Chrome)
 ; Features all of the lightning-fast features a modern programmer needs:
 ;  - Dereference pointers in subexponential time!
