@@ -976,5 +976,5 @@
 ;  - 'funcall_resultvalue' Pulls the return value out of the syntax tree in the event of a normal return.
 ; Note that we're nice and generous and allow _any_ statement at the top level. Cool!
 (define interpret
-  (lambda (file)
-    (funcall_resultvalue (statement_state (cons 'begin (append (parser file) '((funcall main)))) (block_initialState) ))))
+  (lambda (file class)
+    (funcall_resultvalue (statement_state (cons 'begin (append (parser file) (list (list 'funcall (list 'dot class 'main))) )) (block_initialState) ))))
