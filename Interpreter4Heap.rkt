@@ -73,8 +73,8 @@
 (define ptr_dereference
   (lambda (state ptr)
     (cond
-      ((not (number? ptr)) (error 'badptr "Tried to dereference something that wasn't a pointer!") )
-      ((eq? ptr 0)         (error 'badptr "Tried to dereference null pointer!")                    )
+      ((not (number? ptr)) (error 'badptr "Oops, Tried to dereference something that wasn't a pointer!") )
+      ((eq? ptr 0)         (error 'badptr "Oops, Tried to dereference null pointer!")                    )
       (else                (ptr_dereferencefromheap (state_getheap state) ptr)                     ) )))
 
 ; Impl for ptr_dereference.
@@ -82,6 +82,6 @@
 (define ptr_dereferencefromheap
   (lambda (heap ptr)
     (cond
-      ((null? heap) (error 'badptr "Tried to dereference pointer that was outside of heap!") )
+      ((null? heap) (error 'badptr "Oops, Tried to dereference pointer that was outside of heap!") )
       ((eq? ptr 0)  (car heap)                                                               )
       (else         (ptr_dereferencefromheap (cdr heap) (- ptr 1))                           ) )))
