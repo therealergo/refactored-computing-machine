@@ -64,12 +64,12 @@
 ; Returns #t if the given-named class has a superclass, and #f otherwise
 (define class_hassuper
   (lambda (class state)
-    #f))
+    (not (eq? nullptr (classlistentry_getsuperptr (classlist_getentry class (state_getclasslist state)))))))
 
 ; Returns the name of the given-named class's superclass
 (define class_getsuper
   (lambda (class state)
-    #f))
+    (classlistentry_getsuperptr (classlist_getentry class (state_getclasslist state)))))
 
 ; PRIVATE
 
