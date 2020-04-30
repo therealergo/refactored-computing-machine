@@ -193,18 +193,21 @@
       ; Attempt to run any function from this/other classes
       ((class_hasfunction (class_getcurrent state) name state)                                                                (class_getfunction (class_getcurrent state) name state) ) )))
 
+; Return a pointer to the object that a function is called on, given the expression it was called on
 (define funcall_getdirectobjptr
   (lambda (name state)
     (cond
       ((and (list? (cadr name)) (eq? 'dot (caadr name))) (expression_value (cadadr name) state) )
       (else                                              (instance_getthis state)               ) ))) ; TODO: This isn't quite true (if we're calling a static fxn. on a non-static obj.)
 
+; Perform any state updates that occurred during funcall_getdirectobjptr
 (define funcall_getdirectobjptr_resultstate
   (lambda (name state)
     (cond
       ((and (list? (cadr name)) (eq? 'dot (caadr name))) (expression_state (cadadr name) state) )
       (else                                              state                                ) )))
 
+; Return the class that a funcation was called on, given the expression it was called on
 (define funcall_getdirectclass
   (lambda (name state)
     (instance_getclass (funcall_getdirectobjptr name state) (funcall_getdirectobjptr_resultstate name state)) ))
