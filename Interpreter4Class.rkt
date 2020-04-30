@@ -89,6 +89,7 @@
   (lambda (classlist state)
     (state_update 'super classlist state)))
 
+; Creates "classlist": a list of class data from the top-level parse data
 (define parsedclass_createclasslist
   (lambda (parsedclass state)
     (list (parsedclass_createclassname         parsedclass      )
@@ -97,14 +98,17 @@
           (parsedclass_createvarlist   (cadddr parsedclass)     )
           (parsedclass_createfunclist  (cadddr parsedclass)     ) ) ))
 
+; Gets the state that results from creating a classlist
 (define parsedclass_createclasslist_resultstate
   (lambda (parsedclass state)
     (heap_new_resultstate (cons (parsedclass_createclassname parsedclass) (cons (parsedclass_createsuperptr parsedclass state) (parsedclass_createstaticobj (cadddr parsedclass)))) state) ))
 
+; Creates the classlist classname field
 (define parsedclass_createclassname
   (lambda (parsedclass)
     (cadr parsedclass)))
 
+; Creates the classlist static object pointer field
 (define parsedclass_createstaticobj
   (lambda (parsedclass)
     (cond
@@ -113,12 +117,14 @@
       ((and (list? (car parsedclass)) (eq? 'static-var (caar parsedclass))                            ) (cons (list (cadar parsedclass) (caddar parsedclass)) (parsedclass_createstaticobj (cdr parsedclass))) )
       (else                                                                                             (parsedclass_createstaticobj (cdr parsedclass))                                                        ) )))
 
+; Creates the classlist super object pointer field
 (define parsedclass_createsuperptr
   (lambda (parsedclass state)
     (cond
       ((null? (caddr parsedclass)) nullptr                                          )
       (else                        (class_getstaticptr (car (cdaddr parsedclass)) state) ) )))
 
+; Creates the classlist variable list field
 (define parsedclass_createvarlist
   (lambda (parsedclass)
     (cond
@@ -127,6 +133,7 @@
       ((and (list? (car parsedclass)) (eq? 'var (caar parsedclass))                            ) (cons (list (cadar parsedclass) (caddar parsedclass)) (parsedclass_createvarlist (cdr parsedclass))) )
       (else                                                                                      (parsedclass_createvarlist (cdr parsedclass))                                                        ) )))
 
+; Creates the classlist function list field
 (define parsedclass_createfunclist
   (lambda (parsedclass)
     (cond
@@ -200,20 +207,24 @@
 ;----------------------------------------------------------------------;
 ; INSTANCE
 
+; Does first-time setup for instance management on the root state layer
 (define state_setupinstance
   (lambda (state)
     (state_update 'this nullptr (state_declare 'this state))))
-; instance_getthis state
+
+; Returns a pointer to the currently-executing instance
 (define instance_getthis
   (lambda (state)
     (cond
       ((state_isdec 'this state) (state_lookup 'this state) )
       (else                      nullptr                    ) )))
-; instance_setthis ptr state
+
+; Sets the currently-executing instance in the given state
 (define instance_setthis
   (lambda (ptr state)
     (state_update 'this ptr state)))
-; instance_getvar name ptr state
+
+; Returns the named value stored in the pointed-to instance
 (define instance_getvar
   (lambda (name ptr state)
     (cond
@@ -221,14 +232,16 @@
       ((instance_hasvar_impl name (cddr (ptr_dereference (class_getstaticptr (instance_getclass ptr state) state) state))) (instance_getvar name (class_getstaticptr (instance_getclass ptr state) state) state) )
       ((not (eq? (instance_getsuperinstance ptr state) nullptr))                                                           (instance_getvar name (instance_getsuperinstance ptr state) state)                                )
       (else                                                                                                                (error 'badlookup "Oops, couldn't find child variable!")                                          ) )))
-; 
+
+; Implementation for instance_getvar, searches a single variable list
 (define instance_getvar_impl
   (lambda (name varlist)
     (cond
       ((null? varlist)           (error 'badlookup "Oops, couldn't find child variable!") )
       ((eq? name (caar varlist)) (cadar varlist)                                          )
       (else                      (instance_getvar_impl name (cdr varlist))                ) )))
-; instance_setvar name ptr state
+
+; Sets the named value in the pointed-to instance to the given value
 (define instance_setvar
   (lambda (name value ptr state)
     (cond
@@ -236,32 +249,38 @@
       ((instance_hasvar_impl name (cddr (ptr_dereference (class_getstaticptr (instance_getclass ptr state) state) state))) (instance_setvar name value (class_getstaticptr (instance_getclass ptr state) state) state)                                                                          )
       ((not (eq? (instance_getsuperinstance ptr state) nullptr))                                                           (instance_setvar name value (instance_getsuperinstance ptr state) state)                                                                                                         )
       (else                                                                                                                (error 'badset "Oops, couldn't find child variable to set!")                                                                                                                     ) )))
-; 
+
+; Implementation for instance_setvar, sets within a single variable list
 (define instance_setvar_impl
   (lambda (name value varlist)
     (cond
       ((null? varlist)           (error 'badset "Oops, couldn't find child variable to set!")         )
       ((eq? name (caar varlist)) (cons (list name value) (cdr varlist))                               )
       (else                      (cons (car varlist) (instance_setvar_impl name value (cdr varlist))) ) )))
-; instance_getsuper ptr
+
+; Returns a pointer to the given instance's superclass instance, or nullptr if it has no superclass
 (define instance_getsuperinstance
   (lambda (ptr state)
     (cadr (ptr_dereference ptr state))))
-; instance_create_resultptr args state
+
+; Returns the pointer that results from creating a new instance
 (define instance_create_resultptr
   (lambda (state)
     (heap_new_resultptr state)))
-; instance_create_resultstate args state
+
+; Returns the state that results from creating a new instance with the given arguments
 (define instance_create_resultstate
   (lambda (args state)
     (cond
       ((class_hassuper (car args) state) (instance_create_resultstate (list (class_getsuper (car args) state)) (heap_new_resultstate (cons (car args) (cons (instance_create_resultptr (heap_new_resultstate '() state)) (class_getvarlist (car args) state))) state)) )
       (else                                                                                                    (heap_new_resultstate (cons (car args) (cons nullptr                                                      (class_getvarlist (car args) state))) state)  ) )))
-; instance_isthisdec name state
+
+; Returns true iff the given variable name is declared by the currently-executing instance, either statically or non-statically
 (define instance_isthisdec
   (lambda (name state)
     (and (not (ptr_isnull (instance_getthis state))) (instance_hasvar name (instance_getthis state) state))))
-; instance_hasvar name ptr state
+
+; Returns true if the given instance has a variable with the given name
 (define instance_hasvar
   (lambda (name ptr state)
     (cond
@@ -269,7 +288,8 @@
       ((instance_hasvar_impl name (cddr (ptr_dereference (class_getstaticptr (instance_getclass ptr state) state) state))) #t                                                                 )
       ((not (eq? (instance_getsuperinstance ptr state) nullptr))                                                           (instance_hasvar name (instance_getsuperinstance ptr state) state) )
       (else                                                                                                                #f                                                                 ) )))
-; instance_hasvar_impl name varlist
+
+; Implementation for instance_hasvar, searches a single variable list
 (define instance_hasvar_impl
   (lambda (name varlist)
     (cond

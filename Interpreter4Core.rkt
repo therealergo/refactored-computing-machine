@@ -18,6 +18,10 @@
 ; Test cases are shown throughout to demonstrate the functionality of each function.
 ; Here's some examples of how to use this interpreter, in the form of test cases:
 
+; Note: Because of how we implemented OO, we have full support for static variables and functions!
+; My only (known) issue with the statics is that this.x where x is static is considered valid,
+; but I'm considering that 'wontfix' because there are some languages that consider that correct.
+
 ; TEST
 ; Test case: (interpret "Programs/test1.javacish" 'A)
 ;         -> 15
