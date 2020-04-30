@@ -183,7 +183,6 @@
       ((eq? '|| (conditional_operator in)) (boolean_to_interpret (or       (boolean_to_racket (expression_value_impl f_o f_v f_s (conditional_operand1 in) state)) (boolean_to_racket (expression_value_impl f_o f_v f_s (conditional_operand2 in) (expression_state_impl f_o f_v f_s (expression_operand1 in) state))) )))
       ((eq? '!  (conditional_operator in)) (boolean_to_interpret (not      (boolean_to_racket (expression_value_impl f_o f_v f_s (conditional_operand1 in) state))                                                                                                                    )))
 
-;      ((eq? '=  (conditional_operator in)) (expression_value_impl f_o f_v f_s (expression_operand2 in) state))
       ; Set, left-side is normal declared variable
       ((and (eq? '= (expression_operator in)) (state_isdec        (conditional_operand1 in) state))
        (expression_value_impl f_o f_v f_s (conditional_operand2 in) state                         ) )
