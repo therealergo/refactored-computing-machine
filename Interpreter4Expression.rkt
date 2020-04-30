@@ -1,5 +1,6 @@
 #lang racket
 (provide (all-defined-out))
+(require "Interpreter4Class.rkt")
 (require "Interpreter4State.rkt")
 
 ;----------------------------------------------------------------------;
@@ -154,7 +155,17 @@
       ((number? in) in)
       ((eq? in 'true ) in)
       ((eq? in 'false) in)
-      ((state_isdec in state) (state_lookup in state))
+
+      ((eq? 'this  in)                      (instance_getthis state)                                                               )
+      ((eq? 'super in)                      (instance_getsuper (instance_getthis state))                                           )
+      ((and (list? in) (eq? 'new (car in))) (instance_create_resultptr (cdr in) state)                                             )
+      ((and (list? in) (eq? 'dot (car in))) (instance_getvar (caddr in) (expression_value_impl f_o f_v f_s (cadr in) state) state) )
+      
+      ((state_isdec        in state) (state_lookup in state)                             )
+      ((instance_isthisdec in state) (instance_getvar in (instance_getthis state) state) )
+
+      ((class_exists in state) (class_getstaticptr in state) )
+      
       ((not (or (expression_hasoperator in) (conditional_hasoperator in))) (error 'declare "Oops, attempted expression with un-declared variable!"))
       ((and (eq? '- (expression_operator in)) (not (expression_hasOperand2 in))) (-        (expression_value_impl f_o f_v f_s (expression_operand1 in) state)                                                                                               ))
       (     (eq? '+ (expression_operator in))                                    (+        (expression_value_impl f_o f_v f_s (expression_operand1 in) state) (expression_value_impl f_o f_v f_s (expression_operand2 in) (expression_state_impl f_o f_v f_s (expression_operand1 in) state)) ))
@@ -171,7 +182,18 @@
       ((eq? '&& (conditional_operator in)) (boolean_to_interpret (and      (boolean_to_racket (expression_value_impl f_o f_v f_s (conditional_operand1 in) state)) (boolean_to_racket (expression_value_impl f_o f_v f_s (conditional_operand2 in) (expression_state_impl f_o f_v f_s (expression_operand1 in) state))) )))
       ((eq? '|| (conditional_operator in)) (boolean_to_interpret (or       (boolean_to_racket (expression_value_impl f_o f_v f_s (conditional_operand1 in) state)) (boolean_to_racket (expression_value_impl f_o f_v f_s (conditional_operand2 in) (expression_state_impl f_o f_v f_s (expression_operand1 in) state))) )))
       ((eq? '!  (conditional_operator in)) (boolean_to_interpret (not      (boolean_to_racket (expression_value_impl f_o f_v f_s (conditional_operand1 in) state))                                                                                                                    )))
-      ((eq? '=  (conditional_operator in)) (expression_value_impl f_o f_v f_s (expression_operand2 in) state))
+
+;      ((eq? '=  (conditional_operator in)) (expression_value_impl f_o f_v f_s (expression_operand2 in) state))
+      ; Set, left-side is normal declared variable
+      ((and (eq? '= (expression_operator in)) (state_isdec        (conditional_operand1 in) state))
+       (expression_value_impl f_o f_v f_s (conditional_operand2 in) state                         ) )
+      ; Set, left-side is unnamed instance 'this' variable
+      ((and (eq? '= (expression_operator in)) (instance_isthisdec (conditional_operand1 in) state))
+       (expression_value_impl f_o f_v f_s (conditional_operand2 in) state                         ) )
+      ; Set, left-side is dot with some expression
+      ((and (eq? '= (expression_operator in)) (list? (conditional_operand1 in)) (eq? 'dot (car (conditional_operand1 in))))
+       (expression_value_impl f_o f_v f_s (conditional_operand2 in) (expression_state_impl f_o f_v f_s (cadr (conditional_operand1 in)) state)) )
+      
       ((eq? 'funcall (f_o in)) (f_v (f_s in state)))
       (else (error 'badop "Oops, bad expression given!")))))
 
@@ -188,7 +210,17 @@
       ((number? in)           state)
       ((eq? in 'true )        state)
       ((eq? in 'false)        state)
-      ((state_isdec in state) state)
+
+      ((eq? 'this  in)                      state                                               )
+      ((eq? 'super in)                      state                                               )
+      ((and (list? in) (eq? 'new (car in))) (instance_create_resultstate (cdr in) state)        )
+      ((and (list? in) (eq? 'dot (car in))) (expression_state_impl f_o f_v f_s (cadr in) state) )
+      
+      ((state_isdec        in state) state )
+      ((instance_isthisdec in state) state )
+
+      ((class_exists in state) state )
+      
       ((and (eq? '- (expression_operator in)) (not (expression_hasOperand2 in))) (expression_state_impl f_o f_v f_s (expression_operand1 in) state                                            ) )
       (     (eq? '+ (expression_operator in))                                    (expression_state_impl f_o f_v f_s (expression_operand2 in) (expression_state_impl f_o f_v f_s (expression_operand1 in) state)) )
       (     (eq? '- (expression_operator in))                                    (expression_state_impl f_o f_v f_s (expression_operand2 in) (expression_state_impl f_o f_v f_s (expression_operand1 in) state)) )
@@ -204,6 +236,20 @@
       ((eq? '&& (conditional_operator in)) (expression_state_impl f_o f_v f_s (conditional_operand2 in) (expression_state_impl f_o f_v f_s (conditional_operand1 in) state)) )
       ((eq? '|| (conditional_operator in)) (expression_state_impl f_o f_v f_s (conditional_operand2 in) (expression_state_impl f_o f_v f_s (conditional_operand1 in) state)) )
       ((eq? '!  (conditional_operator in)) (expression_state_impl f_o f_v f_s (conditional_operand1 in) state                                             ) )
-      ((eq? '=  (expression_operator in )) (state_update                 (conditional_operand1 in) (expression_value_impl f_o f_v f_s (conditional_operand2 in) state) (expression_state_impl f_o f_v f_s (conditional_operand2 in) state)))
+
+      ; Set, left-side is normal declared variable
+      ((and (eq? '= (expression_operator in)) (state_isdec        (conditional_operand1 in) state)                                                                                    )
+       (state_update (conditional_operand1 in) (expression_value_impl f_o f_v f_s (conditional_operand2 in) state) (expression_state_impl f_o f_v f_s (conditional_operand2 in) state)) )
+      ; Set, left-side is unnamed instance 'this' variable
+      ((and (eq? '= (expression_operator in)) (instance_isthisdec (conditional_operand1 in) state)                                                                                                                )
+       (instance_setvar (conditional_operand1 in) (expression_value_impl f_o f_v f_s (conditional_operand2 in) state) (instance_getthis state) (expression_state_impl f_o f_v f_s (conditional_operand2 in) state)) )
+      ; Set, left-side is dot with some expression
+      ((and (eq? '= (expression_operator in)) (list? (conditional_operand1 in)) (eq? 'dot (car (conditional_operand1 in))))
+       (instance_setvar
+        (caddr (conditional_operand1 in)                                                                                                        )   ; setvar name
+        (expression_value_impl f_o f_v f_s (conditional_operand2 in) (expression_state_impl f_o f_v f_s (cadr (conditional_operand1 in)) state) )   ; setvar value
+        (expression_value_impl f_o f_v f_s (cadr (conditional_operand1 in)) state                                                               )   ; setvar ptr
+        (expression_state_impl f_o f_v f_s (conditional_operand2 in) (expression_state_impl f_o f_v f_s (cadr (conditional_operand1 in)) state) ))) ; setvar state
+       
       ((eq? 'funcall (f_o in)) (f_s in state))
       (else (error 'badop "Oops, bad expression given!")))))

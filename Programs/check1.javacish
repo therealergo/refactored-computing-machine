@@ -1,9 +1,14 @@
 class A {
-  var x = 5;
-  var y = 10;
+  static var stat1 = 10;
+  static var stat2 = 10;
+  var inst1 = 5;
+  var inst2 = 10;
 
   static function main() {
     var a = new A();
+    var b = new A(1, 2, 3).x.y.main(arg1, arg2);
+    a.x.y.main();
+    a.x.main();
     a.main();
     main();
   }

@@ -1,6 +1,8 @@
 #lang racket
 (provide (all-defined-out))
 (require "classParser.rkt")
+(require "Interpreter4Heap.rkt")
+(require "Interpreter4Class.rkt")
 (require "Interpreter4State.rkt")
 (require "Interpreter4Expression.rkt")
 
@@ -17,32 +19,32 @@
 ; Here's some examples of how to use this interpreter, in the form of test cases:
 
 ; TEST
-; Test case: (interpret "Programs/test1.javacish")
-;         -> 
-; Test case: (interpret "Programs/test2.javacish")
-;         -> 
-; Test case: (interpret "Programs/test3.javacish")
-;         -> 
-; Test case: (interpret "Programs/test4.javacish")
-;         -> 
-; Test case: (interpret "Programs/test5.javacish")
-;         -> 
-; Test case: (interpret "Programs/test6.javacish")
-;         -> 
-; Test case: (interpret "Programs/test7.javacish")
-;         -> 
-; Test case: (interpret "Programs/test8.javacish")
-;         -> 
-; Test case: (interpret "Programs/test9.javacish")
-;         -> 
-; Test case: (interpret "Programs/test10.javacish")
-;         -> 
-; Test case: (interpret "Programs/test11.javacish")
-;         -> 
-; Test case: (interpret "Programs/test12.javacish")
-;         -> 
-; Test case: (interpret "Programs/test13.javacish")
-;         -> 
+; Test case: (interpret "Programs/test1.javacish" 'A)
+;         -> 15
+; Test case: (interpret "Programs/test2.javacish" 'A)
+;         -> 12
+; Test case: (interpret "Programs/test3.javacish" 'A)
+;         -> 125
+; Test case: (interpret "Programs/test4.javacish" 'A)
+;         -> 36
+; Test case: (interpret "Programs/test5.javacish" 'A)
+;         -> 54
+; Test case: (interpret "Programs/test6.javacish" 'A)
+;         -> 110
+; Test case: (interpret "Programs/test7.javacish" 'C)
+;         -> 26
+; Test case: (interpret "Programs/test8.javacish" 'Square)
+;         -> 117
+; Test case: (interpret "Programs/test9.javacish" 'Square)
+;         -> 32
+; Test case: (interpret "Programs/test10.javacish" 'List)
+;         -> 15
+; Test case: (interpret "Programs/test11.javacish" 'List)
+;         -> 123456 
+; Test case: (interpret "Programs/test12.javacish" 'List)
+;         -> 5285
+; Test case: (interpret "Programs/test13.javacish" 'C)
+;         -> -716
 
 ;----------------------------------------------------------------------;
 ; WRAPPER(S) FOR "Interpreter4Expression"
@@ -105,16 +107,6 @@
 ;----------------------------------------------------------------------;
 ; ASSIGNMENT
 
-; Get the 'variable' part of the given assignment statement
-; Test case: (assignment_variable '(= y (+ y 1)))
-;         -> 'y
-(define assignment_variable cadr)
-
-; Get the 'expression' part of the given assignment statement
-; Test case: (assignment_expression '(= y (+ y 1)))
-;         -> '(+ y 1)
-(define assignment_expression caddr)
-
 ; Return the state that results from executing the given assignment statement
 ; Test case: (assignment_resultstate '(= x 2) '(()))
 ;         -> #error#
@@ -126,152 +118,7 @@
 ;         -> '(((x 2) (y 2)))
 (define assignment_resultstate
   (lambda (in state)
-    (state_update (assignment_variable in) (expression_value (assignment_expression in) state) (expression_state (assignment_expression in) state))))
-
-;----------------------------------------------------------------------;
-; CLASS
-
-; Get the first item in a list
-; Test case: (statement_first '((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x))))))
-;         -> '(var x)
-(define statement_first car)
-
-; Get the remaining items in a list
-; Test case: (statement_remaining '((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x))))))
-;         -> '((constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x)))))
-(define statement_remaining cdr)
-
-; Get the name of a given class
-; Test case: (class_name '(class A () ((var x 5) (var y 10))))
-;         -> 'A
-(define class_name cadr)
-
-; Get the 'extends' portion of a given class
-; Test case: (class_extends '(class A () ((var x 5) (var y 10))))
-;         -> '()
-; Test case: (class_extends '(class B (extends A) ((var x 5) (var y 10))))
-;         -> '(extends A)
-(define class_extends caddr)
-
-; Return #t if a given class has a super class, #f otherwise
-; Test case: (extends? '(class A () ((var x 5) (var y 10))))
-;         -> #f
-; Test case: (extends? '(class B (extends A) ((var x 5) (var y 10))))
-;         -> #t
-(define extends?
-  (lambda (in)
-    (cond
-      ((null? (class_extends in)) #f)
-      ((eq? 'extends (statement_first (class_extends in))) #t)
-      (else (error 'badconst "Oops, bad 'extends' field given!")))))
-
-; Get the body of a given class
-; Test case: (class_body '(class A () ((var x 5) (var y 10))))
-;         -> '((var x 5) (var y 10))
-; Test case: (class_body '(class A () ((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x)))))))
-;         -> '((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x)))))
-(define class_body cadddr)
-
-; Return #t if the constructor has parameters, #f otherwise
-; Test case: (constructor? '((var x 5) (var y 10)))
-;         -> #f
-; Test case: (constructor? '((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x))))))
-;         -> #t
-(define constructor?
-  (lambda (in)
-    (cond
-      ((null? in)                                                #f                                    )
-      ((eq? 'constructor (statement_first (statement_first in))) #t                                    )
-      (else                                                     (constructor? (statement_remaining in))))))
-
-; Get the constructor of a given class
-; Test case: (class_constructor '((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x))))))
-;         -> '(constructor (val) ((= x val)))
-(define class_constructor
-  (lambda (in)
-    (cond
-      ((null? in)                                                (error 'badconst "Oops, this function has no constructor!"))
-      ((eq? 'constructor (statement_first (statement_first in))) (statement_first in)                                       )
-      (else                                                      (class_constructor (statement_remaining in))               ))))
-
-; Return the state that results from saving a class definition.
-; The entire class body is just placed into the state, mapped to its name.
-; Test case: (class_resultstate '(class A () ((var x 5) (var y 10))) '(((z 10))))
-;         -> '(((A (class A () ((constructor ()) (var x 5) (var y 10)))) (z 10)))
-; Test case: (class_resultstate '(class A () ((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x)))))) '(((z 10))))
-;         -> '(((A (class A () ((var x) (constructor (val) ((= x val))) (static-function main () ((var a (new A 10)) (return (dot a x))))))) (z 10)))
-(define class_resultstate
-  (lambda (in state)
-    (cond
-      ((constructor? (class_body in)) (state_update (class_name in) in (state_declare (class_name in) state)))
-      (else                           (state_update (class_name in) (append (append (append (list 'class) (list (class_name in))) (list (class_extends in))) (list (append (list (append (list 'constructor) '(()))) (class_body in))))
-                                                                       (state_declare (class_name in) state))))))
-; Execute the body of a class
-(define class_execute
-  (lambda (in state)
-    (statement_state (class_body (class_resultstate (statement_first in) state)) state)))
-      
-
-;----------------------------------------------------------------------;
-; INSTANCE
-
-; Return class type of instance in the state
-; Test case: (state_classtype 'a '(((a (new A)) (z 10))))
-;         -> 'A
-(define state_classtype
-  (lambda (name state)
-    (cond
-      ((eq? (statement_first (state_lookup name state)) 'new) (class_name (state_lookup name state))))))
-
-; Test case: (key_word '(dot super m))
-;         -> 'super
-; Test case: (key_word '(dot a x))
-;         -> 'a
-; Return the 'key word' of the expression
-(define key_word cadr)
-
-; Test case: (subject '(dot super m))
-;         -> 'm
-; Test case: (subject '(dot a x))
-;         -> 'x
-; Return the 'subject' that dot is being applied to
-(define subject caddr)
-
-(define (atom? x)
-  (and (not (null? x))
-       (not (pair? x))))
-
-; Apply 'dot' to a statement
-; key_word can either be the current class, a parent class, an instance saved to the state, or a newly declared instance
-; subject can be a variable or a function call
-(define dot_resultstate
-  (lambda (in state)
-    (cond
-      ((eq? 'this  (key_word (statement_first in))) (this_resultstate in state)    ) ; refers to the class that is currently running
-      ((eq? 'super (key_word (statement_first in))) (super_resultstate in state)   ) ;refers to the parent class
-      ((atom?      (key_word (statement_first in))) (declared_resultstate in state)) ;refers to instance saved in state
-      (else                                         (new_resultstate in state))    ))) ;refers to a newly declared instance
-
-; For the current class
-; Return variable value or return function closure
-(define this_resultstate
-  (lambda (in state)
-    (state_lookup (subject (statement_first in)) state)))
-
-; For the parent class
-(define super_resultstate
-  (lambda (in state)
-    (state_lookup (subject (statement_first in)) (statement_state (state_lookup (statement_remaining (class_extends in)) state) '(())))))
-
-; For an instance saved in state
-(define declared_resultstate
-  (lambda (in state)
-    (state_lookup (subject (statement_first in)) (statement_state (state_lookup (key_word (statement_first in)) state) '(())))))
-
-; For a newly declared instance
-(define new_resultstate
-  (lambda (in state)
-    (state_lookup (subject (statement_first in)) (statement_state (statement_first (statement_remaining (key_word (statement_first in)))) '(())))))
+    (expression_state in state) ))
 
 ;----------------------------------------------------------------------;
 ; FUNCTION
@@ -314,7 +161,47 @@
 ;         -> 'min
 ; Test case: (funcall_name '(funcall min (+ x y) z w))
 ;         -> 'min
-(define funcall_name cadr)
+; Test case: ((funcall_name '(funcall (dot (dot (dot (new A 1 2 3) x) y) main)))
+;         -> 'main
+(define funcall_name
+  (lambda (name)
+    (cond
+      ((and (list? (cadr name)) (eq? 'dot (caadr name))) (car (cddadr name)) )
+      (else                                              (cadr name)         ) )))
+
+; Get the expression on which the function is called
+; Test case: (funcall_expr '(funcall min (+ x y)))
+;         -> '()
+; Test case: (funcall_expr '(funcall min (+ x y) z w))
+;         -> '()
+; Test case: (funcall_expr '(funcall (dot (dot (dot (new A 1 2 3) x) y) main)))
+;         -> '(dot (dot (new A 1 2 3) x) y)
+(define funcall_expr
+  (lambda (name)
+    (cond
+      ((and (list? name) (list? (cadr name))) (cadadr name) )
+      (else                                   '()           ) )))
+
+; Retrieve the (function ...) block for the given function name and current state
+(define funcall_function
+  (lambda (name state)
+    (cond
+
+      ; Attempt to run any function in the state with that name, e.g. an in-line function
+      ((and (and (state_isdec name state) (list? (state_lookup name state))) (eq? 'function (car (state_lookup name state)))) (state_lookup name state)                               )
+
+      ; Attempt to run any function from this/other classes
+      ((class_hasfunction (class_getcurrent state) name state)                                                                (class_getfunction (class_getcurrent state) name state) ) )))
+
+(define funcall_getdirectobjptr
+  (lambda (name state)
+    (cond
+      ((and (list? (cadr name)) (eq? 'dot (caadr name))) (expression_value (cadadr name) state) )
+      (else                                              (instance_getthis state)               ) ))) ; TODO: This isn't quite true (if we're calling a static fxn. on a non-static obj.)
+
+(define funcall_getdirectclass
+  (lambda (name state)
+    (instance_getclass (funcall_getdirectobjptr name state) state) ))
 
 ; Get the list of argument expressions to call the function with
 ; Test case: (funcall_args '(funcall min (+ x y)))
@@ -393,6 +280,18 @@
     (state_update 'continue (lambda (state2) (error 'badcontinue "Oops, continue lead out of function!")) (state_declare 'continue
     (state_update 'catch    (lambda (state2) (catch  state2))                                             (state_declare 'catch (pushlayer state) )) )) )) )) ) ))
 
+(define funcall_resultstate
+  (lambda (in state)
+    ;; Reset any changes made to 'class and 'this variables
+    (instance_setthis (instance_getthis state)
+    (class_setcurrent (class_getcurrent state)
+
+    (funcall_resultstate_impl in
+                              
+    ;; Update 'class and 'this variables according to the funcall
+    (instance_setthis (funcall_getdirectobjptr in state)
+    (class_setcurrent (funcall_getdirectclass  in state) state))))) ))
+
 ; This is the "meat & potatoes" core of the function interpreter.
 ; Effectively, this does all of the steps necessary to execute the given function.
 ; This is effectively running down the following list of items:
@@ -406,7 +305,7 @@
 ; 8: Set the function return value correctly if a return occurred, or set it to an error value if no return occurred
 ; 9: Recombine the (potentially modified) state that the function could see with the state that it couldn't see
 ; (state_lookup 'catch state) (state_functioninvisible (funcall_name in) (funcall_evalargs_resultstate (funcall_args in) state))
-(define funcall_resultstate
+(define funcall_resultstate_impl
   (lambda (in state)
     ;; #9 ;;
     (state_combineinvisiblevisible
@@ -421,12 +320,12 @@
          (poplayer
           ;; #6 ;;
           (statement_state
-           (cons 'begin (function_body (state_lookup (funcall_name in) state)))
+           (cons 'begin (function_body (funcall_function (funcall_name in) state)))
            ;; #5 ;;
            (funcall_bindargs2parameters_resultstate
             ;; #4 ;;
             (funcall_evalargs_valuelist (funcall_args in) state)
-            (function_parameters (state_lookup (funcall_name in) state))
+            (function_parameters (funcall_function (funcall_name in) state))
             ;; #3 ;;
             (funcall_createNewLayer
                                       ;; #8 through function return callback ;;
@@ -437,7 +336,9 @@
              (state_functionvisible
               (funcall_name in)
               ;; #1 ;;
-              (funcall_evalargs_resultstate (funcall_args in) state))))))))))))
+              (funcall_evalargs_resultstate (funcall_args in)
+               ;; Execute funcall name (e.g. any new's)
+               (expression_state (funcall_expr in) state))))))))))) ))
 
 ; Gets the result (return) value from the most recent function call in the given state.
 ; Test case: (funcall_resultvalue '(((function 0))))
@@ -781,8 +682,6 @@
       ((eq? 'throw    (statement_operator in)) (throw_resultstate       in       state                        ))
       ((eq? 'function (statement_operator in)) (function_resultstate    in       state                        ))
       ((eq? 'funcall  (statement_operator in)) (funcall_resultstate     in       state                        ))
-      ((eq? 'class    (statement_operator in)) (class_resultstate       in       state                        ))
-      ((eq? 'dot      (statement_operator in)) (dot_resultstate         in       state                        ))
       (else (error 'badop "Oops, bad statement given!")))))
 
 ; Wrapper that calls the interpreter on the given file
@@ -795,4 +694,7 @@
 ; Note that we're nice and generous and allow _any_ statement at the top level. Cool!
 (define interpret
   (lambda (file class)
-    (funcall_resultvalue (statement_state (cons 'begin (append (parser file) (list (list 'funcall (list 'dot class 'main))) )) (block_initialState) ))))
+;    (state_loadparsedclasses (parser file) (state_createheap (state_setupinstance (state_setupclass (block_initialState))))) ))
+;    (funcall_resultstate (list 'funcall (list 'dot class 'main)) (state_loadparsedclasses (parser file) (state_createheap (state_setupinstance (state_setupclass (block_initialState)))))) ))
+    (funcall_resultvalue (funcall_resultstate (list 'funcall (list 'dot class 'main)) (state_loadparsedclasses (parser file) (state_createheap (state_setupinstance (state_setupclass (block_initialState))))))) ))
+;    (funcall_resultvalue (statement_state (cons 'begin (append (parser file) (list (list 'funcall (list 'dot class 'main))) )) (state_createheap (state_setupinstance (state_setupclass (block_initialState)))) ))))
