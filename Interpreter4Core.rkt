@@ -178,7 +178,8 @@
       ((and (and (state_isdec name state) (list? (state_lookup name state))) (eq? 'function (car (state_lookup name state)))) (state_lookup name state)                               )
 
       ; Attempt to run any function from this/other classes
-      ((class_hasfunction (class_getcurrent state) name state)                                                                (class_getfunction (class_getcurrent state) name state) ) )))
+      ((class_hasfunction (class_getcurrent state) name state)                                                                (class_getfunction (class_getcurrent state) name state) )
+      (else                                                                                                                   (error 'nofunc "Called function not found!")            ) )))
 
 ; Return a pointer to the object that a function is called on, given the expression it was called on
 (define funcall_getdirectobjptr

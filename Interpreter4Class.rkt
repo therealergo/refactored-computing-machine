@@ -18,10 +18,12 @@
   (lambda (state)
     (state_update 'super '() (state_update 'class nullptr (state_declare 'super (state_declare 'class state))))))
 
-; Loads all of the classes parsed into the given atom into a state
+; Loads all of the classes stored in the given atom into a state
 (define state_loadparsedclasses
   (lambda (parsedclasses state)
-    (state_setclasslist (append (parsedclasses_createclasslist parsedclasses state) (state_getclasslist state)) (parsedclasses_createclasslist_resultstate parsedclasses state)) ))
+    (cond
+      ((null? parsedclasses)             state                                                                                                                                                                                                                            )
+      ((eq? 'class (caar parsedclasses)) (state_loadparsedclasses (cdr parsedclasses) (state_setclasslist (cons (parsedclass_createclasslist (car parsedclasses) state) (state_getclasslist state)) (parsedclass_createclasslist_resultstate (car parsedclasses) state))) ) )))
 
 ; Returns the classname atom of the currently-executing class
 (define class_getcurrent
@@ -54,9 +56,20 @@
     (funclist_getentry name (classlistentry_getfunclist (classlist_getentry class (state_getclasslist state)))) ))
 
 ; Returns a list of the names of the non-static variables associated with the given class.
+; Variables are organized into pairs with the name as the first member and the initialization value as the second member.
 (define class_getvarlist
   (lambda (class state)
     (classlistentry_getvarlist (classlist_getentry class (state_getclasslist state))) ))
+
+; Returns #t if the given-named class has a superclass, and #f otherwise
+(define class_hassuper
+  (lambda (class state)
+    (#f)))
+
+; Returns the name of the given-named class's superclass
+(define class_getsuper
+  (lambda (class state)
+    (#f)))
 
 ; PRIVATE
 
@@ -70,27 +83,13 @@
   (lambda (classlist state)
     (state_update 'super classlist state)))
 
-; Creates a classlist based on the given set of parsed classes
-(define parsedclasses_createclasslist
-  (lambda (parsedclasses state)
-    (cond
-      ((null? parsedclasses)             '()                                                                                                                                                                                    )
-      ((eq? 'class (caar parsedclasses)) (cons (parsedclass_createclasslist (car parsedclasses) state) (parsedclasses_createclasslist (cdr parsedclasses) (parsedclass_createclasslist_resultstate (car parsedclasses) state))) )
-      (else                              (error 'nonclass "Oops, non-class entry found at top level!")                                                                                                                          ) )))
-
-(define parsedclasses_createclasslist_resultstate
-  (lambda (parsedclasses state)
-    (cond
-      ((null? parsedclasses)             state                                                                                                                               )
-      ((eq? 'class (caar parsedclasses)) (parsedclass_createclasslist_resultstate (car parsedclasses) (parsedclasses_createclasslist_resultstate (cdr parsedclasses) state)) )
-      (else                              (error 'nonclass "Oops, non-class entry found at top level!")                                                                       ) )))
-
 (define parsedclass_createclasslist
   (lambda (parsedclass state)
-    (list (parsedclass_createclassname         parsedclass )
-          (parsedclass_createvarlist   (cadddr parsedclass))
-          (heap_new_resultptr state                        )
-          (parsedclass_createfunclist  (cadddr parsedclass)) ) ))
+    (list (parsedclass_createclassname         parsedclass      )
+          (heap_new_resultptr state                             )
+          (parsedclass_createsuperptr          parsedclass state)
+          (parsedclass_createvarlist   (cadddr parsedclass)     )
+          (parsedclass_createfunclist  (cadddr parsedclass)     ) ) ))
 
 (define parsedclass_createclasslist_resultstate
   (lambda (parsedclass state)
@@ -100,6 +99,19 @@
   (lambda (parsedclass)
     (cadr parsedclass)))
 
+(define parsedclass_createstaticobj
+  (lambda (parsedclass)
+    (cond
+      ((null? parsedclass)                                                  '()                                                                                 )
+      ((and (list? (car parsedclass)) (eq? 'static-var (caar parsedclass))) (cons (list (cadar parsedclass) 0) (parsedclass_createstaticobj (cdr parsedclass))) )
+      (else                                                                 (parsedclass_createstaticobj (cdr parsedclass))                                     ) )))
+
+(define parsedclass_createsuperptr
+  (lambda (parsedclass state)
+    (cond
+      ((null? (caddr parsedclass)) nullptr                                          )
+      (else                        (class_getstaticptr (car (cdaddr parsedclass)) state) ) )))
+
 (define parsedclass_createvarlist
   (lambda (parsedclass)
     (cond
@@ -107,13 +119,6 @@
       ((and (list? (car parsedclass)) (eq? 'var (caar parsedclass)) (null? (cddar parsedclass))) (cons (list (cadar parsedclass)                    0) (parsedclass_createvarlist (cdr parsedclass))) )
       ((and (list? (car parsedclass)) (eq? 'var (caar parsedclass))                            ) (cons (list (cadar parsedclass) (caddar parsedclass)) (parsedclass_createvarlist (cdr parsedclass))) )
       (else                                                                                      (parsedclass_createvarlist (cdr parsedclass))                                                        ) )))
-
-(define parsedclass_createstaticobj
-  (lambda (parsedclass)
-    (cond
-      ((null? parsedclass)                                                  '()                                                                                 )
-      ((and (list? (car parsedclass)) (eq? 'static-var (caar parsedclass))) (cons (list (cadar parsedclass) 0) (parsedclass_createstaticobj (cdr parsedclass))) )
-      (else                                                                 (parsedclass_createstaticobj (cdr parsedclass))                                     ) )))
 
 (define parsedclass_createfunclist
   (lambda (parsedclass)
@@ -143,21 +148,26 @@
 (define classlistentry_getclassname
   (lambda (classlistentry)
     (car classlistentry)))
-     
-; Gets the non-static variable list from a classlistentry
-(define classlistentry_getvarlist
-  (lambda (classlistentry)
-    (cadr classlistentry)))
 
 ; Gets the static object pointer from a classlistentry
 (define classlistentry_getstaticptr
   (lambda (classlistentry)
+    (cadr classlistentry)))
+
+; Gets the superclass instance pointer from a classlistentry
+(define classlistentry_getsuperptr
+  (lambda (classlistentry)
     (caddr classlistentry)))
+     
+; Gets the non-static variable list from a classlistentry
+(define classlistentry_getvarlist
+  (lambda (classlistentry)
+    (cadddr classlistentry)))
 
 ; Gets the function list from a classlistentry
 (define classlistentry_getfunclist
   (lambda (classlistentry)
-    (cadddr classlistentry)))
+    (car (cddddr classlistentry))))
 
 ; Gets the function name from a funclistentry
 (define funclistentry_getfuncname
@@ -219,8 +229,8 @@
       ((eq? name (caar varlist)) (cons (list name value) (cdr varlist))                               )
       (else                      (cons (car varlist) (instance_setvar_impl name value (cdr varlist))) ) )))
 ; instance_getsuper ptr
-(define instance_getsuper
-  (lambda (ptr)
+(define instance_getsuperinstance
+  (lambda (ptr state)
     (error 'madeit "Nice!")))
 ; instance_create_resultptr args state
 (define instance_create_resultptr
@@ -246,7 +256,7 @@
       ((eq? name (caar varlist)) #t                                        )
       (else                      (instance_hasvar_impl name (cdr varlist)) ) )))
 
-; Returns the classname atom of the given instance
+; Returns the classname atom for the given instance
 (define instance_getclass
   (lambda (ptr state)
     (car (ptr_dereference ptr state))))
