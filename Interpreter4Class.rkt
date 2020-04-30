@@ -64,12 +64,12 @@
 ; Returns #t if the given-named class has a superclass, and #f otherwise
 (define class_hassuper
   (lambda (class state)
-    (#f)))
+    #f))
 
 ; Returns the name of the given-named class's superclass
 (define class_getsuper
   (lambda (class state)
-    (#f)))
+    #f))
 
 ; PRIVATE
 
@@ -93,7 +93,7 @@
 
 (define parsedclass_createclasslist_resultstate
   (lambda (parsedclass state)
-    (heap_new_resultstate (cons (parsedclass_createclassname parsedclass) (parsedclass_createstaticobj (cadddr parsedclass))) state) ))
+    (heap_new_resultstate (cons (parsedclass_createclassname parsedclass) (cons (parsedclass_createsuperptr parsedclass state) (parsedclass_createstaticobj (cadddr parsedclass)))) state) ))
 
 (define parsedclass_createclassname
   (lambda (parsedclass)
@@ -209,7 +209,7 @@
 ; instance_getvar name ptr state
 (define instance_getvar
   (lambda (name ptr state)
-    (instance_getvar_impl name (cdr (ptr_dereference ptr state)))))
+    (instance_getvar_impl name (cddr (ptr_dereference ptr state)))))
 ; 
 (define instance_getvar_impl
   (lambda (name varlist)
@@ -220,7 +220,7 @@
 ; instance_setvar name ptr state
 (define instance_setvar
   (lambda (name value ptr state)
-    (ptr_setvalue ptr (cons (car (ptr_dereference ptr state)) (instance_setvar_impl name value (cdr (ptr_dereference ptr state)))) state) ))
+    (ptr_setvalue ptr (cons (car (ptr_dereference ptr state)) (cons (cadr (ptr_dereference ptr state)) (instance_setvar_impl name value (cddr (ptr_dereference ptr state))))) state) ))
 ; 
 (define instance_setvar_impl
   (lambda (name value varlist)
@@ -234,12 +234,14 @@
     (error 'madeit "Nice!")))
 ; instance_create_resultptr args state
 (define instance_create_resultptr
-  (lambda (args state)
+  (lambda (state)
     (heap_new_resultptr state)))
 ; instance_create_resultstate args state
 (define instance_create_resultstate
   (lambda (args state)
-    (heap_new_resultstate (cons (car args) (class_getvarlist (car args) state)) state)))
+    (cond
+      ((class_hassuper (car args) state) (heap_new_resultstate (cons (car args) (cons (instance_create_resultptr (list (class_getsuper (car args))) state) (class_getvarlist (car args) state))) (instance_create_resultstate (list (class_getsuper (car args))) state)) )
+      (else                              (heap_new_resultstate (cons (car args) (cons nullptr                                                              (class_getvarlist (car args) state))) state                                                                 ) ) )))
 ; instance_isthisdec name state
 (define instance_isthisdec
   (lambda (name state)
@@ -247,7 +249,7 @@
 ; instance_hasvar name ptr state
 (define instance_hasvar
   (lambda (name ptr state)
-    (instance_hasvar_impl name (cdr (ptr_dereference ptr state)))))
+    (instance_hasvar_impl name (cddr (ptr_dereference ptr state)))))
 ; instance_hasvar_impl name varlist
 (define instance_hasvar_impl
   (lambda (name varlist)
