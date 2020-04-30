@@ -199,9 +199,15 @@
       ((and (list? (cadr name)) (eq? 'dot (caadr name))) (expression_value (cadadr name) state) )
       (else                                              (instance_getthis state)               ) ))) ; TODO: This isn't quite true (if we're calling a static fxn. on a non-static obj.)
 
+(define funcall_getdirectobjptr_resultstate
+  (lambda (name state)
+    (cond
+      ((and (list? (cadr name)) (eq? 'dot (caadr name))) (expression_state (cadadr name) state) )
+      (else                                              state                                ) )))
+
 (define funcall_getdirectclass
   (lambda (name state)
-    (instance_getclass (funcall_getdirectobjptr name state) state) ))
+    (instance_getclass (funcall_getdirectobjptr name state) (funcall_getdirectobjptr_resultstate name state)) ))
 
 ; Get the list of argument expressions to call the function with
 ; Test case: (funcall_args '(funcall min (+ x y)))
@@ -286,11 +292,16 @@
     (instance_setthis (instance_getthis state)
     (class_setcurrent (class_getcurrent state)
 
-    (funcall_resultstate_impl in
+    (funcall_resultstate_impl in (funcall_evalargs_valuelist (funcall_args in) (expression_state (funcall_expr in) state))
                               
     ;; Update 'class and 'this variables according to the funcall
     (instance_setthis (funcall_getdirectobjptr in state)
-    (class_setcurrent (funcall_getdirectclass  in state) state))))) ))
+    (class_setcurrent (funcall_getdirectclass  in state)
+
+    ;; Execute the function call's arguments
+    (funcall_evalargs_resultstate (funcall_args in) 
+    ;; Execute the expression to the left of the function call
+    (expression_state (funcall_expr in) state))))))) ))
 
 ; This is the "meat & potatoes" core of the function interpreter.
 ; Effectively, this does all of the steps necessary to execute the given function.
@@ -306,10 +317,10 @@
 ; 9: Recombine the (potentially modified) state that the function could see with the state that it couldn't see
 ; (state_lookup 'catch state) (state_functioninvisible (funcall_name in) (funcall_evalargs_resultstate (funcall_args in) state))
 (define funcall_resultstate_impl
-  (lambda (in state)
+  (lambda (in valuelist state)
     ;; #9 ;;
     (state_combineinvisiblevisible
-     (state_functioninvisible (funcall_name in) (funcall_evalargs_resultstate (funcall_args in) state))
+     (state_functioninvisible (funcall_name in) state)
      (call/cc
       (lambda (return)
         ;; #8 ;;
@@ -324,21 +335,19 @@
            ;; #5 ;;
            (funcall_bindargs2parameters_resultstate
             ;; #4 ;;
-            (funcall_evalargs_valuelist (funcall_args in) state)
+            valuelist
             (function_parameters (funcall_function (funcall_name in) state))
             ;; #3 ;;
             (funcall_createNewLayer
                                       ;; #8 through function return callback ;;
              (lambda (state2) (return (state_update 'function (state_lookup 'return state2) (poplayer state2))))
                                                                                                              ;; #9 through exception catch callback ;;
-             (lambda (state2) ((state_lookup 'catch state) (state_update 'catch (state_lookup 'catch state2) (state_combineinvisiblevisible (state_functioninvisible (funcall_name in) (funcall_evalargs_resultstate (funcall_args in) state)) (poplayer state2)))))
+             (lambda (state2) ((state_lookup 'catch state) (state_update 'catch (state_lookup 'catch state2) (state_combineinvisiblevisible (state_functioninvisible (funcall_name in) state) (poplayer state2)))))
              ;; #2 ;;
              (state_functionvisible
               (funcall_name in)
               ;; #1 ;;
-              (funcall_evalargs_resultstate (funcall_args in)
-               ;; Execute funcall name (e.g. any new's)
-               (expression_state (funcall_expr in) state))))))))))) ))
+              state))))))))) ))
 
 ; Gets the result (return) value from the most recent function call in the given state.
 ; Test case: (funcall_resultvalue '(((function 0))))
