@@ -169,19 +169,6 @@
       ((and (list? (cadr name)) (eq? 'dot (caadr name))) (car (cddadr name)) )
       (else                                              (cadr name)         ) )))
 
-; Get the expression on which the function is called
-; Test case: (funcall_expr '(funcall min (+ x y)))
-;         -> '()
-; Test case: (funcall_expr '(funcall min (+ x y) z w))
-;         -> '()
-; Test case: (funcall_expr '(funcall (dot (dot (dot (new A 1 2 3) x) y) main)))
-;         -> '(dot (dot (new A 1 2 3) x) y)
-(define funcall_expr
-  (lambda (name)
-    (cond
-      ((and (list? name) (list? (cadr name))) (cadadr name) )
-      (else                                   '()           ) )))
-
 ; Retrieve the (function ...) block for the given function name and current state
 (define funcall_function
   (lambda (name state)
@@ -295,7 +282,7 @@
     (instance_setthis (instance_getthis state)
     (class_setcurrent (class_getcurrent state)
 
-    (funcall_resultstate_impl in (funcall_evalargs_valuelist (funcall_args in) (expression_state (funcall_expr in) state))
+    (funcall_resultstate_impl in (funcall_evalargs_valuelist (funcall_args in) (funcall_getdirectobjptr_resultstate in state))
                               
     ;; Update 'class and 'this variables according to the funcall
     (instance_setthis (funcall_getdirectobjptr in state)
@@ -304,7 +291,7 @@
     ;; Execute the function call's arguments
     (funcall_evalargs_resultstate (funcall_args in) 
     ;; Execute the expression to the left of the function call
-    (expression_state (funcall_expr in) state))))))) ))
+    (funcall_getdirectobjptr_resultstate in state))))))) ))
 
 ; This is the "meat & potatoes" core of the function interpreter.
 ; Effectively, this does all of the steps necessary to execute the given function.
