@@ -165,6 +165,7 @@
       ((instance_isthisdec in state) (instance_getvar in (instance_getthis state) state) )
 
       ((class_exists in state) (class_getstaticptr in state) )
+      ((not (list? in)) (error 'badop "Oops, unknown class/var token!") )
       
       ((not (or (expression_hasoperator in) (conditional_hasoperator in))) (error 'declare "Oops, attempted expression with un-declared variable!"))
       ((and (eq? '- (expression_operator in)) (not (expression_hasOperand2 in))) (-        (expression_value_impl f_o f_v f_s (expression_operand1 in) state)                                                                                               ))
@@ -219,6 +220,7 @@
       ((instance_isthisdec in state) state )
 
       ((class_exists in state) state )
+      ((not (list? in)) (error 'badop "Oops, unknown class/var token!") )
       
       ((and (eq? '- (expression_operator in)) (not (expression_hasOperand2 in))) (expression_state_impl f_o f_v f_s (expression_operand1 in) state                                            ) )
       (     (eq? '+ (expression_operator in))                                    (expression_state_impl f_o f_v f_s (expression_operand2 in) (expression_state_impl f_o f_v f_s (expression_operand1 in) state)) )
