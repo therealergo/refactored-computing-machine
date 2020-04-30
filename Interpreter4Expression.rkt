@@ -165,7 +165,7 @@
       ((instance_isthisdec in state) (instance_getvar in (instance_getthis state) state) )
 
       ((class_exists in state) (class_getstaticptr in state) )
-      ((not (list? in)) (error 'badop "Oops, unknown class/var token!") )
+      ((not (list? in)) (error 'badop "Oops, unknown class/var token \"~s\"!" in) )
       
       ((not (or (expression_hasoperator in) (conditional_hasoperator in))) (error 'declare "Oops, attempted expression with un-declared variable!"))
       ((and (eq? '- (expression_operator in)) (not (expression_hasOperand2 in))) (-        (expression_value_impl f_o f_v f_s (expression_operand1 in) state)                                                                                               ))
@@ -195,7 +195,7 @@
        (expression_value_impl f_o f_v f_s (conditional_operand2 in) (expression_state_impl f_o f_v f_s (cadr (conditional_operand1 in)) state)) )
       
       ((eq? 'funcall (f_o in)) (f_v (f_s in state)))
-      (else (error 'badop "Oops, bad expression given!")))))
+      (else (error 'badop "Oops, bad expression \"~s\" given!" in)))))
 
 ; Get the resulting state after evaluating the given expression against the given state.
 ; Note: f_o, f_v, and f_s are abbreviations for funcall_operator, funcall_resultvalue, and funcall_resultstate respectively.
@@ -220,7 +220,7 @@
       ((instance_isthisdec in state) state )
 
       ((class_exists in state) state )
-      ((not (list? in)) (error 'badop "Oops, unknown class/var token!") )
+      ((not (list? in)) (error 'badop "Oops, unknown class/var token \"~s\"!" in) )
       
       ((and (eq? '- (expression_operator in)) (not (expression_hasOperand2 in))) (expression_state_impl f_o f_v f_s (expression_operand1 in) state                                            ) )
       (     (eq? '+ (expression_operator in))                                    (expression_state_impl f_o f_v f_s (expression_operand2 in) (expression_state_impl f_o f_v f_s (expression_operand1 in) state)) )
@@ -253,4 +253,4 @@
         (expression_state_impl f_o f_v f_s (conditional_operand2 in) (expression_state_impl f_o f_v f_s (cadr (conditional_operand1 in)) state) ))) ; setvar state
        
       ((eq? 'funcall (f_o in)) (f_s in state))
-      (else (error 'badop "Oops, bad expression given!")))))
+      (else (error 'badop "Oops, bad expression \"~s\" given!" in)))))

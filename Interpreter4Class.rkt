@@ -48,12 +48,18 @@
 ; Checks if the given class has a function with the given name
 (define class_hasfunction
   (lambda (class name state)
-    (funclist_hasentry name (classlistentry_getfunclist (classlist_getentry class (state_getclasslist state)))) ))
+    (cond
+      ((funclist_hasentry name (classlistentry_getfunclist (classlist_getentry class (state_getclasslist state)))) #t                                                          )
+      ((class_hassuper class state)                                                                                (class_hasfunction (class_getsuper class state) name state) )
+      (else                                                                                                        #f                                                          ) )))
 
 ; Returns the function with the given name for the given class
 (define class_getfunction
   (lambda (class name state)
-    (funclist_getentry name (classlistentry_getfunclist (classlist_getentry class (state_getclasslist state)))) ))
+    (cond
+      ((funclist_hasentry name (classlistentry_getfunclist (classlist_getentry class (state_getclasslist state)))) (funclist_getentry name (classlistentry_getfunclist (classlist_getentry class (state_getclasslist state)))) )
+      ((class_hassuper class state)                                                                                (class_getfunction (class_getsuper class state) name state)                                                 )
+      (else                                                                                                        (error 'nofunc "Oops, requested function not found!")                                                       ) )))
 
 ; Returns a list of the names of the non-static variables associated with the given class.
 ; Variables are organized into pairs with the name as the first member and the initialization value as the second member.
@@ -69,7 +75,7 @@
 ; Returns the name of the given-named class's superclass
 (define class_getsuper
   (lambda (class state)
-    (classlistentry_getsuperptr (classlist_getentry class (state_getclasslist state)))))
+    (car (ptr_dereference (classlistentry_getsuperptr (classlist_getentry class (state_getclasslist state))) state))))
 
 ; PRIVATE
 
@@ -209,7 +215,10 @@
 ; instance_getvar name ptr state
 (define instance_getvar
   (lambda (name ptr state)
-    (instance_getvar_impl name (cddr (ptr_dereference ptr state)))))
+    (cond
+      ((instance_hasvar_impl name (cddr (ptr_dereference ptr state))) (instance_getvar_impl name (cddr (ptr_dereference ptr state)))     )
+      ((not (eq? (instance_getsuperinstance ptr state) nullptr))      (instance_getvar name (instance_getsuperinstance ptr state) state) )
+      (else                                                           (error 'badlookup "Oops, couldn't find child variable!")           ) )))
 ; 
 (define instance_getvar_impl
   (lambda (name varlist)
@@ -220,7 +229,10 @@
 ; instance_setvar name ptr state
 (define instance_setvar
   (lambda (name value ptr state)
-    (ptr_setvalue ptr (cons (car (ptr_dereference ptr state)) (cons (cadr (ptr_dereference ptr state)) (instance_setvar_impl name value (cddr (ptr_dereference ptr state))))) state) ))
+    (cond
+      ((instance_hasvar_impl name (cddr (ptr_dereference ptr state))) (ptr_setvalue ptr (cons (car (ptr_dereference ptr state)) (cons (cadr (ptr_dereference ptr state)) (instance_setvar_impl name value (cddr (ptr_dereference ptr state))))) state) )
+      ((not (eq? (instance_getsuperinstance ptr state) nullptr))      (instance_setvar name value (instance_getsuperinstance ptr state) state)                                                                                                         )
+      (else                                                           (error 'badset "Oops, couldn't find child variable to set!")                                                                                                                     ) )))
 ; 
 (define instance_setvar_impl
   (lambda (name value varlist)
@@ -231,7 +243,7 @@
 ; instance_getsuper ptr
 (define instance_getsuperinstance
   (lambda (ptr state)
-    (error 'madeit "Nice!")))
+    (cadr (ptr_dereference ptr state))))
 ; instance_create_resultptr args state
 (define instance_create_resultptr
   (lambda (state)
@@ -240,8 +252,8 @@
 (define instance_create_resultstate
   (lambda (args state)
     (cond
-      ((class_hassuper (car args) state) (heap_new_resultstate (cons (car args) (cons (instance_create_resultptr (list (class_getsuper (car args))) state) (class_getvarlist (car args) state))) (instance_create_resultstate (list (class_getsuper (car args))) state)) )
-      (else                              (heap_new_resultstate (cons (car args) (cons nullptr                                                              (class_getvarlist (car args) state))) state                                                                 ) ) )))
+      ((class_hassuper (car args) state) (instance_create_resultstate (list (class_getsuper (car args) state)) (heap_new_resultstate (cons (car args) (cons (instance_create_resultptr (heap_new_resultstate '() state)) (class_getvarlist (car args) state))) state)) )
+      (else                                                                                                    (heap_new_resultstate (cons (car args) (cons nullptr                                                      (class_getvarlist (car args) state))) state)  ) )))
 ; instance_isthisdec name state
 (define instance_isthisdec
   (lambda (name state)
@@ -249,7 +261,10 @@
 ; instance_hasvar name ptr state
 (define instance_hasvar
   (lambda (name ptr state)
-    (instance_hasvar_impl name (cddr (ptr_dereference ptr state)))))
+    (cond
+      ((instance_hasvar_impl name (cddr (ptr_dereference ptr state))) #t                                                                 )
+      ((not (eq? (instance_getsuperinstance ptr state) nullptr))      (instance_hasvar name (instance_getsuperinstance ptr state) state) )
+      (else                                                           #f                                                                 ) )))
 ; instance_hasvar_impl name varlist
 (define instance_hasvar_impl
   (lambda (name varlist)
