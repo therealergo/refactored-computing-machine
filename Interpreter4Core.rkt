@@ -31,7 +31,7 @@
 ;         -> 54
 ; Test case: (interpret "Programs/test6.javacish" 'A)
 ;         -> 110
-; Test case: (interpret "Programs/test7.javacish" 'C)
+; Test case: (interpret "Programs/test7.javacish" 'C)         FAILING
 ;         -> 26
 ; Test case: (interpret "Programs/test8.javacish" 'Square)
 ;         -> 117
@@ -43,8 +43,22 @@
 ;         -> 123456 
 ; Test case: (interpret "Programs/test12.javacish" 'List)
 ;         -> 5285
-; Test case: (interpret "Programs/test13.javacish" 'C)
+; Test case: (interpret "Programs/test13.javacish" 'C)         FAILING
 ;         -> -716
+; Test case: (interpret "Programs/test24.javacish" 'A)
+;         -> 2045
+; Test case: (interpret "Programs/test31.javacish" 'A)
+;         -> 20
+; Test case: (interpret "Programs/test32.javacish" 'B)
+;         -> 530
+; Test case: (interpret "Programs/test33.javacish" 'B)
+;         -> 615
+; Test case: (interpret "Programs/test34.javacish" 'Box)
+;         -> 16
+; Test case: (interpret "Programs/test35.javacish" 'A)
+;         -> 100
+; Test case: (interpret "Programs/test36.javacish" 'A)
+;         -> 420
 
 ;----------------------------------------------------------------------;
 ; WRAPPER(S) FOR "Interpreter4Expression"

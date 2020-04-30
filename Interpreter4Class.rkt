@@ -108,9 +108,10 @@
 (define parsedclass_createstaticobj
   (lambda (parsedclass)
     (cond
-      ((null? parsedclass)                                                  '()                                                                                 )
-      ((and (list? (car parsedclass)) (eq? 'static-var (caar parsedclass))) (cons (list (cadar parsedclass) 0) (parsedclass_createstaticobj (cdr parsedclass))) )
-      (else                                                                 (parsedclass_createstaticobj (cdr parsedclass))                                     ) )))
+      ((null? parsedclass)                                                                              '()                                                                                                    )
+      ((and (list? (car parsedclass)) (eq? 'static-var (caar parsedclass)) (null? (cddar parsedclass))) (cons (list (cadar parsedclass)                    0) (parsedclass_createstaticobj (cdr parsedclass))) )
+      ((and (list? (car parsedclass)) (eq? 'static-var (caar parsedclass))                            ) (cons (list (cadar parsedclass) (caddar parsedclass)) (parsedclass_createstaticobj (cdr parsedclass))) )
+      (else                                                                                             (parsedclass_createstaticobj (cdr parsedclass))                                                        ) )))
 
 (define parsedclass_createsuperptr
   (lambda (parsedclass state)
@@ -216,9 +217,10 @@
 (define instance_getvar
   (lambda (name ptr state)
     (cond
-      ((instance_hasvar_impl name (cddr (ptr_dereference ptr state))) (instance_getvar_impl name (cddr (ptr_dereference ptr state)))     )
-      ((not (eq? (instance_getsuperinstance ptr state) nullptr))      (instance_getvar name (instance_getsuperinstance ptr state) state) )
-      (else                                                           (error 'badlookup "Oops, couldn't find child variable!")           ) )))
+      ((instance_hasvar_impl name (cddr (ptr_dereference ptr state)))                                                      (instance_getvar_impl name (cddr (ptr_dereference ptr state)))                                    )
+      ((instance_hasvar_impl name (cddr (ptr_dereference (class_getstaticptr (instance_getclass ptr state) state) state))) (instance_getvar name (class_getstaticptr (instance_getclass ptr state) state) state) )
+      ((not (eq? (instance_getsuperinstance ptr state) nullptr))                                                           (instance_getvar name (instance_getsuperinstance ptr state) state)                                )
+      (else                                                                                                                (error 'badlookup "Oops, couldn't find child variable!")                                          ) )))
 ; 
 (define instance_getvar_impl
   (lambda (name varlist)
@@ -230,9 +232,10 @@
 (define instance_setvar
   (lambda (name value ptr state)
     (cond
-      ((instance_hasvar_impl name (cddr (ptr_dereference ptr state))) (ptr_setvalue ptr (cons (car (ptr_dereference ptr state)) (cons (cadr (ptr_dereference ptr state)) (instance_setvar_impl name value (cddr (ptr_dereference ptr state))))) state) )
-      ((not (eq? (instance_getsuperinstance ptr state) nullptr))      (instance_setvar name value (instance_getsuperinstance ptr state) state)                                                                                                         )
-      (else                                                           (error 'badset "Oops, couldn't find child variable to set!")                                                                                                                     ) )))
+      ((instance_hasvar_impl name (cddr (ptr_dereference ptr state)))                                                      (ptr_setvalue ptr (cons (car (ptr_dereference ptr state)) (cons (cadr (ptr_dereference ptr state)) (instance_setvar_impl name value (cddr (ptr_dereference ptr state))))) state) )
+      ((instance_hasvar_impl name (cddr (ptr_dereference (class_getstaticptr (instance_getclass ptr state) state) state))) (instance_setvar name value (class_getstaticptr (instance_getclass ptr state) state) state)                                                                          )
+      ((not (eq? (instance_getsuperinstance ptr state) nullptr))                                                           (instance_setvar name value (instance_getsuperinstance ptr state) state)                                                                                                         )
+      (else                                                                                                                (error 'badset "Oops, couldn't find child variable to set!")                                                                                                                     ) )))
 ; 
 (define instance_setvar_impl
   (lambda (name value varlist)
@@ -262,9 +265,10 @@
 (define instance_hasvar
   (lambda (name ptr state)
     (cond
-      ((instance_hasvar_impl name (cddr (ptr_dereference ptr state))) #t                                                                 )
-      ((not (eq? (instance_getsuperinstance ptr state) nullptr))      (instance_hasvar name (instance_getsuperinstance ptr state) state) )
-      (else                                                           #f                                                                 ) )))
+      ((instance_hasvar_impl name (cddr (ptr_dereference ptr state)))                                                      #t                                                                 )
+      ((instance_hasvar_impl name (cddr (ptr_dereference (class_getstaticptr (instance_getclass ptr state) state) state))) #t                                                                 )
+      ((not (eq? (instance_getsuperinstance ptr state) nullptr))                                                           (instance_hasvar name (instance_getsuperinstance ptr state) state) )
+      (else                                                                                                                #f                                                                 ) )))
 ; instance_hasvar_impl name varlist
 (define instance_hasvar_impl
   (lambda (name varlist)
