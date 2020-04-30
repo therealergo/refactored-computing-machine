@@ -1,0 +1,15 @@
+class A {
+
+  var x = 100;
+  var y = 10;
+
+  function add(g, h) {
+    return g + h;
+  }
+
+  static function main() {
+    var k = new A();
+    var l = new A();
+    return new A().add(k.x, l.y);
+  }
+}

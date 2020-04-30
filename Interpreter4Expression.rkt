@@ -156,10 +156,10 @@
       ((eq? in 'true ) in)
       ((eq? in 'false) in)
 
-      ((eq? 'this  in)                      (instance_getthis state)                                                               )
-      ((eq? 'super in)                      (instance_getsuper (instance_getthis state))                                           )
-      ((and (list? in) (eq? 'new (car in))) (instance_create_resultptr (cdr in) state)                                             )
-      ((and (list? in) (eq? 'dot (car in))) (instance_getvar (caddr in) (expression_value_impl f_o f_v f_s (cadr in) state) state) )
+      ((eq? 'this  in)                      (instance_getthis state)                                                                                                             )
+      ((eq? 'super in)                      (instance_getsuper (instance_getthis state))                                                                                         )
+      ((and (list? in) (eq? 'new (car in))) (instance_create_resultptr (cdr in) state)                                                                                           )
+      ((and (list? in) (eq? 'dot (car in))) (instance_getvar (caddr in) (expression_value_impl f_o f_v f_s (cadr in) state) (expression_state_impl f_o f_v f_s (cadr in) state)) )
       
       ((state_isdec        in state) (state_lookup in state)                             )
       ((instance_isthisdec in state) (instance_getvar in (instance_getthis state) state) )
