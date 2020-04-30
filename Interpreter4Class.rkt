@@ -103,10 +103,10 @@
 (define parsedclass_createvarlist
   (lambda (parsedclass)
     (cond
-      ((null? parsedclass)                                           '()                                                                                                                               )
-      ((and (list? (car parsedclass)) (eq? 'var (caar parsedclass)) (null? (caddar parsedclass))) (cons (list (cadar parsedclass)                    0) (parsedclass_createvarlist (cdr parsedclass))) )
-      ((and (list? (car parsedclass)) (eq? 'var (caar parsedclass))                             ) (cons (list (cadar parsedclass) (caddar parsedclass)) (parsedclass_createvarlist (cdr parsedclass))) )
-      (else                                                                                       (parsedclass_createvarlist (cdr parsedclass))                                                        ) )))
+      ((null? parsedclass)                                                                       '()                                                                                                  )
+      ((and (list? (car parsedclass)) (eq? 'var (caar parsedclass)) (null? (cddar parsedclass))) (cons (list (cadar parsedclass)                    0) (parsedclass_createvarlist (cdr parsedclass))) )
+      ((and (list? (car parsedclass)) (eq? 'var (caar parsedclass))                            ) (cons (list (cadar parsedclass) (caddar parsedclass)) (parsedclass_createvarlist (cdr parsedclass))) )
+      (else                                                                                      (parsedclass_createvarlist (cdr parsedclass))                                                        ) )))
 
 (define parsedclass_createstaticobj
   (lambda (parsedclass)
@@ -215,9 +215,9 @@
 (define instance_setvar_impl
   (lambda (name value varlist)
     (cond
-      ((null? varlist)           (error 'badset "Oops, couldn't find child variable to set!")   )
-      ((eq? name (caar varlist)) (cons (list name value) varlist)                               )
-      (else                      (cons (car varlist) (instance_getvar_impl name (cdr varlist))) ) )))
+      ((null? varlist)           (error 'badset "Oops, couldn't find child variable to set!")         )
+      ((eq? name (caar varlist)) (cons (list name value) (cdr varlist))                               )
+      (else                      (cons (car varlist) (instance_setvar_impl name value (cdr varlist))) ) )))
 ; instance_getsuper ptr
 (define instance_getsuper
   (lambda (ptr)
